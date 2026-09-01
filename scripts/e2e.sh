@@ -38,6 +38,20 @@ fi
 echo "Using nvim: $NVIM_BIN ($("$NVIM_BIN" --version | head -1))" >&2
 echo "Using edifact-ls: $EDIFACT_LS_BIN" >&2
 
+# Build the tree-sitter grammar (installing its npm devDependency,
+# tree-sitter-cli, on first run) so highlighting can be exercised too. A C
+# compiler is required to compile the generated parser.c -- see
+# tree-sitter-edifact/README.md.
+TS_DIR="tree-sitter-edifact"
+if [ ! -d "$TS_DIR/node_modules" ]; then
+  echo "Installing tree-sitter-edifact's npm dependencies..." >&2
+  npm --prefix "$TS_DIR" install
+fi
+npx --prefix "$TS_DIR" tree-sitter build -o "$TS_DIR/edifact.so" "$TS_DIR"
+export EDIFACT_TS_PARSER="$(pwd)/$TS_DIR/edifact.so"
+export EDIFACT_TS_HIGHLIGHTS="$(pwd)/$TS_DIR/queries/highlights.scm"
+echo "Using tree-sitter parser: $EDIFACT_TS_PARSER" >&2
+
 # noswapfile: checks intentionally leave buffers modified without saving
 # (e.g. after formatting), and a leftover swapfile from a prior run --
 # crashed, killed, or interrupted -- would otherwise block a later run on

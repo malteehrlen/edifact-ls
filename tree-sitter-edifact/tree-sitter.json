@@ -1,0 +1,16 @@
+{
+  "metadata": {
+    "version": "0.1.0",
+    "license": "MIT"
+  },
+  "grammars": [
+    {
+      "name": "edifact",
+      "camelcase": "Edifact",
+      "scope": "source.edifact",
+      "path": ".",
+      "file-types": ["edi", "edifact"],
+      "highlights": "queries/highlights.scm"
+    }
+  ]
+}

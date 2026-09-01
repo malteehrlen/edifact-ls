@@ -1,3 +1,11 @@
 /dist/
 /.tools/
 /.hermit/
+
+# tree-sitter-edifact: node_modules and the platform-specific compiled
+# parser are build artifacts; src/{parser.c,grammar.json,node-types.json}
+# ARE committed (standard tree-sitter grammar convention -- lets consumers
+# build the parser with just a C compiler, no Node.js/tree-sitter-cli).
+/tree-sitter-edifact/node_modules/
+/tree-sitter-edifact/*.so
+/tree-sitter-edifact/*.wasm

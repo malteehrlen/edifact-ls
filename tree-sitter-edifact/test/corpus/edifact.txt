@@ -1,0 +1,211 @@
+================================================================================
+minimal segment, default delimiters
+================================================================================
+
+BGM+220+ORDER123+9'
+
+---
+
+(source_file
+  (segment
+    (segment_tag)
+    (element
+      (component
+        (data)))
+    (element
+      (component
+        (data)))
+    (element
+      (component
+        (data)))
+    (terminator)))
+
+================================================================================
+composite element
+================================================================================
+
+DTM+137:20100101:102'
+
+---
+
+(source_file
+  (segment
+    (segment_tag)
+    (element
+      (component
+        (data))
+      (component
+        (data))
+      (component
+        (data)))
+    (terminator)))
+
+================================================================================
+escaped delimiter and release characters
+================================================================================
+
+FTX+AAA+1+12?+34:56??78'
+
+---
+
+(source_file
+  (segment
+    (segment_tag)
+    (element
+      (component
+        (data)))
+    (element
+      (component
+        (data)))
+    (element
+      (component
+        (data))
+      (component
+        (data)))
+    (terminator)))
+
+================================================================================
+empty components and elements
+================================================================================
+
+TAG++X'ABC+A::B'
+
+---
+
+(source_file
+  (segment
+    (segment_tag)
+    (element
+      (component
+        (data)))
+    (terminator))
+  (segment
+    (segment_tag)
+    (element
+      (component
+        (data))
+      (component
+        (data)))
+    (terminator)))
+
+================================================================================
+UNA service string advice with default delimiters
+================================================================================
+
+UNA:+.? 'UNH+1+ORDERS:D:96A:UN'
+
+---
+
+(source_file
+  (una_advice)
+  (segment
+    (segment_tag)
+    (element
+      (component
+        (data)))
+    (element
+      (component
+        (data))
+      (component
+        (data))
+      (component
+        (data))
+      (component
+        (data)))
+    (terminator)))
+
+================================================================================
+a realistic full interchange
+================================================================================
+
+UNB+UNOA:1+SENDER:ZZ+RECEIVER:ZZ+201001:1200+1'
+UNH+1+ORDERS:D:96A:UN'
+BGM+220+ORDER123+9'
+DTM+137:20100101:102'
+UNT+4+1'
+UNZ+1+1'
+
+---
+
+(source_file
+  (segment
+    (segment_tag)
+    (element
+      (component
+        (data))
+      (component
+        (data)))
+    (element
+      (component
+        (data))
+      (component
+        (data)))
+    (element
+      (component
+        (data))
+      (component
+        (data)))
+    (element
+      (component
+        (data))
+      (component
+        (data)))
+    (element
+      (component
+        (data)))
+    (terminator))
+  (segment
+    (segment_tag)
+    (element
+      (component
+        (data)))
+    (element
+      (component
+        (data))
+      (component
+        (data))
+      (component
+        (data))
+      (component
+        (data)))
+    (terminator))
+  (segment
+    (segment_tag)
+    (element
+      (component
+        (data)))
+    (element
+      (component
+        (data)))
+    (element
+      (component
+        (data)))
+    (terminator))
+  (segment
+    (segment_tag)
+    (element
+      (component
+        (data))
+      (component
+        (data))
+      (component
+        (data)))
+    (terminator))
+  (segment
+    (segment_tag)
+    (element
+      (component
+        (data)))
+    (element
+      (component
+        (data)))
+    (terminator))
+  (segment
+    (segment_tag)
+    (element
+      (component
+        (data)))
+    (element
+      (component
+        (data)))
+    (terminator)))

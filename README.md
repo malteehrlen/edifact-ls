@@ -23,6 +23,10 @@ backlog.
   binary) — see `AGENTS.md` for how this repo uses it (run `beans prime` for
   the full guide).
 
+- Node.js/npm and a C compiler are needed to build the tree-sitter grammar
+  (`tree-sitter-edifact/`) — only required for syntax highlighting; the LSP
+  server, formatting, and diagnostics don't need them.
+
 ## Build & test
 
 ```sh
@@ -51,6 +55,14 @@ EDIFACT_LS_BIN="$(pwd)/dist/edifact-ls" nvim -u editors/nvim/init.lua testdata/m
   reverse direction is just `vim.lsp.buf.format()` (`textDocument/formatting`),
   since formatting already produces the human-readable multiline form.
 
+### Syntax highlighting
+
+Highlighting is a separate [tree-sitter](https://tree-sitter.github.io/tree-sitter/)
+grammar in `tree-sitter-edifact/`, independent of the LSP server's own
+parser — see `tree-sitter-edifact/README.md` for how to build it and enable
+it in the dev harness (via `EDIFACT_TS_PARSER`/`EDIFACT_TS_HIGHLIGHTS`).
+`scripts/e2e.sh` builds and wires it in automatically.
+
 ## e2e test harness
 
 `scripts/e2e.sh` builds nothing itself (run `make build` first, or use
@@ -58,9 +70,11 @@ EDIFACT_LS_BIN="$(pwd)/dist/edifact-ls" nvim -u editors/nvim/init.lua testdata/m
 
 1. Locate or download a pinned Neovim into `.tools/` (no manual setup
    needed — safe to run in CI).
-2. Launch it `--headless` with `editors/nvim/init.lua`, pointed at
-   `$EDIFACT_LS_BIN`.
-3. Run `scripts/e2e_check.lua`, which drives real editor behavior (opening
+2. Build the tree-sitter grammar (`tree-sitter-edifact/`), installing its
+   npm dependency on first run.
+3. Launch nvim `--headless` with `editors/nvim/init.lua`, pointed at
+   `$EDIFACT_LS_BIN` and the built tree-sitter parser.
+4. Run `scripts/e2e_check.lua`, which drives real editor behavior (opening
    files, waiting for the LSP client, etc.) and asserts on it.
 
 Exit code is non-zero if any check fails, with a `FAIL: ...` reason on

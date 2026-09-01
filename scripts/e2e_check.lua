@@ -18,7 +18,7 @@ end
 -- Check: opening a valid EDIFACT fixture attaches the edifact_ls LSP client.
 local function check_lsp_attaches()
   local fixture = vim.fn.fnamemodify("testdata/minimal.edi", ":p")
-  vim.cmd.edit(fixture)
+  vim.cmd.edit({ fixture, bang = true })
 
   local attached = vim.wait(3000, function()
     local clients = vim.lsp.get_clients({ name = "edifact_ls" })
@@ -37,7 +37,7 @@ end
 -- message contains the given substring.
 local function check_diagnostic(fixture, expect_substring)
   local path = vim.fn.fnamemodify(fixture, ":p")
-  vim.cmd.edit(path)
+  vim.cmd.edit({ path, bang = true })
 
   local diags
   local ok = vim.wait(3000, function()
@@ -66,7 +66,7 @@ end
 -- expected multiline layout.
 local function check_formatting()
   local fixture = vim.fn.fnamemodify("testdata/unformatted.edi", ":p")
-  vim.cmd.edit(fixture)
+  vim.cmd.edit({ fixture, bang = true })
 
   local attached = vim.wait(3000, function()
     local clients = vim.lsp.get_clients({ name = "edifact_ls", bufnr = 0 })
@@ -109,7 +109,7 @@ end
 -- the expected single-line wire format via edifact-ls.minify.
 local function check_minify()
   local fixture = vim.fn.fnamemodify("testdata/minimal.edi", ":p")
-  vim.cmd.edit(fixture)
+  vim.cmd.edit({ fixture, bang = true })
 
   local attached = vim.wait(3000, function()
     local clients = vim.lsp.get_clients({ name = "edifact_ls", bufnr = 0 })
@@ -143,11 +143,40 @@ local function check_minify()
   pass("EdifactMinify on " .. fixture .. " produced the expected single-line wire format")
 end
 
+-- Check: the tree-sitter parser is active for a valid fixture and produces
+-- no ERROR/MISSING nodes. Only runs if EDIFACT_TS_PARSER is set (see
+-- editors/nvim/init.lua); skipped otherwise rather than failing, so plain
+-- LSP-only runs aren't forced to build the tree-sitter toolchain.
+local function check_treesitter()
+  if not os.getenv("EDIFACT_TS_PARSER") or os.getenv("EDIFACT_TS_PARSER") == "" then
+    print("SKIP: tree-sitter check (EDIFACT_TS_PARSER not set)")
+    return
+  end
+
+  local fixture = vim.fn.fnamemodify("testdata/minimal.edi", ":p")
+  vim.cmd.edit({ fixture, bang = true })
+
+  local ok, parser_or_err = pcall(vim.treesitter.get_parser, 0, "edifact")
+  if not ok then
+    fail("no tree-sitter parser active for " .. fixture .. ": " .. tostring(parser_or_err))
+    return
+  end
+
+  local root = parser_or_err:parse()[1]:root()
+  if root:has_error() then
+    fail("tree-sitter parse of " .. fixture .. " has ERROR/MISSING nodes:\n" .. root:sexpr())
+    return
+  end
+
+  pass("tree-sitter parser active on " .. fixture .. " with no ERROR nodes")
+end
+
 check_lsp_attaches()
 check_diagnostic("testdata/syntax-error.edi", "invalid segment tag")
 check_diagnostic("testdata/envelope-error.edi", "missing UNZ")
 check_formatting()
 check_minify()
+check_treesitter()
 
 if failed then
   vim.cmd("cquit 1")

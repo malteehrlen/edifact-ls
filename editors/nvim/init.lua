@@ -8,6 +8,11 @@
 -- (stable since 0.11), which is what nvim-lspconfig itself now builds on. This
 -- keeps the dev/test harness dependency-free; a real nvim-lspconfig-based
 -- setup for end users is tracked separately (editor packaging & distribution).
+--
+-- Syntax highlighting (tree-sitter) is registered too, but only if
+-- EDIFACT_TS_PARSER is set (path to the compiled tree-sitter-edifact/*.so --
+-- see tree-sitter-edifact/README or scripts/e2e.sh for how to build it), so
+-- plain LSP-only testing doesn't require the tree-sitter toolchain.
 
 vim.filetype.add({
   extension = {
@@ -30,6 +35,26 @@ vim.lsp.config("edifact_ls", {
 })
 
 vim.lsp.enable("edifact_ls")
+
+local ts_parser_path = os.getenv("EDIFACT_TS_PARSER")
+if ts_parser_path and ts_parser_path ~= "" then
+  vim.treesitter.language.add("edifact", { path = ts_parser_path })
+
+  local highlights_path = os.getenv("EDIFACT_TS_HIGHLIGHTS")
+  if highlights_path and highlights_path ~= "" then
+    local f = assert(io.open(highlights_path, "r"))
+    local query = f:read("*a")
+    f:close()
+    vim.treesitter.query.set("edifact", "highlights", query)
+  end
+
+  vim.api.nvim_create_autocmd("FileType", {
+    pattern = "edifact",
+    callback = function(args)
+      vim.treesitter.start(args.buf, "edifact")
+    end,
+  })
+end
 
 vim.api.nvim_create_user_command("EdifactMinify", function()
   local client = vim.lsp.get_clients({ name = "edifact_ls", bufnr = 0 })[1]
