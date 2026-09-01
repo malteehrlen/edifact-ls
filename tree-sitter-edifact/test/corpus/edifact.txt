@@ -227,3 +227,217 @@ GDS:1:2+data'
       (component
         (data)))
     (terminator)))
+
+================================================================================
+functional group (UNG/UNE) wrapping two messages
+================================================================================
+
+UNB+UNOA:1+SENDER:ZZ+RECEIVER:ZZ+201001:1200+1'
+UNG+INVOIC+15623+23457+201001:1200+G1+UN+96A:1'
+UNH+1+ORDERS:D:96A:UN'
+BGM+220'
+UNT+3+1'
+UNH+2+ORDERS:D:96A:UN'
+BGM+221'
+UNT+3+2'
+UNE+2+G1'
+UNZ+1+1'
+
+---
+
+(source_file
+  (segment
+    (segment_tag)
+    (element
+      (component
+        (data))
+      (component
+        (data)))
+    (element
+      (component
+        (data))
+      (component
+        (data)))
+    (element
+      (component
+        (data))
+      (component
+        (data)))
+    (element
+      (component
+        (data))
+      (component
+        (data)))
+    (element
+      (component
+        (data)))
+    (terminator))
+  (segment
+    (segment_tag)
+    (element
+      (component
+        (data)))
+    (element
+      (component
+        (data)))
+    (element
+      (component
+        (data)))
+    (element
+      (component
+        (data))
+      (component
+        (data)))
+    (element
+      (component
+        (data)))
+    (element
+      (component
+        (data)))
+    (element
+      (component
+        (data))
+      (component
+        (data)))
+    (terminator))
+  (segment
+    (segment_tag)
+    (element
+      (component
+        (data)))
+    (element
+      (component
+        (data))
+      (component
+        (data))
+      (component
+        (data))
+      (component
+        (data)))
+    (terminator))
+  (segment
+    (segment_tag)
+    (element
+      (component
+        (data)))
+    (terminator))
+  (segment
+    (segment_tag)
+    (element
+      (component
+        (data)))
+    (element
+      (component
+        (data)))
+    (terminator))
+  (segment
+    (segment_tag)
+    (element
+      (component
+        (data)))
+    (element
+      (component
+        (data))
+      (component
+        (data))
+      (component
+        (data))
+      (component
+        (data)))
+    (terminator))
+  (segment
+    (segment_tag)
+    (element
+      (component
+        (data)))
+    (terminator))
+  (segment
+    (segment_tag)
+    (element
+      (component
+        (data)))
+    (element
+      (component
+        (data)))
+    (terminator))
+  (segment
+    (segment_tag)
+    (element
+      (component
+        (data)))
+    (element
+      (component
+        (data)))
+    (terminator))
+  (segment
+    (segment_tag)
+    (element
+      (component
+        (data)))
+    (element
+      (component
+        (data)))
+    (terminator)))
+
+================================================================================
+section control segment (UNS)
+================================================================================
+
+UNH+1+ORDERS:D:96A:UN'
+BGM+220'
+UNS+D'
+CCC+data'
+UNS+S'
+UNT+6+1'
+
+---
+
+(source_file
+  (segment
+    (segment_tag)
+    (element
+      (component
+        (data)))
+    (element
+      (component
+        (data))
+      (component
+        (data))
+      (component
+        (data))
+      (component
+        (data)))
+    (terminator))
+  (segment
+    (segment_tag)
+    (element
+      (component
+        (data)))
+    (terminator))
+  (segment
+    (segment_tag)
+    (element
+      (component
+        (data)))
+    (terminator))
+  (segment
+    (segment_tag)
+    (element
+      (component
+        (data)))
+    (terminator))
+  (segment
+    (segment_tag)
+    (element
+      (component
+        (data)))
+    (terminator))
+  (segment
+    (segment_tag)
+    (element
+      (component
+        (data)))
+    (element
+      (component
+        (data)))
+    (terminator)))

@@ -156,13 +156,13 @@ end
 -- no ERROR/MISSING nodes. Only runs if EDIFACT_TS_PARSER is set (see
 -- editors/nvim/init.lua); skipped otherwise rather than failing, so plain
 -- LSP-only runs aren't forced to build the tree-sitter toolchain.
-local function check_treesitter()
+local function check_treesitter(fixture_path)
   if not os.getenv("EDIFACT_TS_PARSER") or os.getenv("EDIFACT_TS_PARSER") == "" then
     print("SKIP: tree-sitter check (EDIFACT_TS_PARSER not set)")
     return
   end
 
-  local fixture = vim.fn.fnamemodify("testdata/minimal.edi", ":p")
+  local fixture = vim.fn.fnamemodify(fixture_path or "testdata/minimal.edi", ":p")
   vim.cmd.edit({ fixture, bang = true })
 
   local ok, parser_or_err = pcall(vim.treesitter.get_parser, 0, "edifact")
@@ -188,6 +188,7 @@ check_diagnostic("testdata/lint-info.edi", "default delimiters", vim.diagnostic.
 check_formatting()
 check_minify()
 check_treesitter()
+check_treesitter("testdata/functional-group.edi")
 
 if failed then
   vim.cmd("cquit 1")
