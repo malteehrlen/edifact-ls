@@ -1,6 +1,7 @@
 package lspserver
 
 import (
+	"strings"
 	"unicode/utf16"
 
 	"github.com/malteehrlen/edifact-ls/internal/edifact"
@@ -137,4 +138,30 @@ func offsetToLSPPosition(text string, offset int) protocol.Position {
 
 	units := utf16.Encode([]rune(text[lineStart:offset]))
 	return protocol.Position{Line: protocol.UInteger(line), Character: protocol.UInteger(len(units))}
+}
+
+// lspPositionToOffset converts an LSP Position (0-based line, UTF-16
+// code-unit character offset within that line) to a 0-based byte offset
+// into text -- the reverse of offsetToLSPPosition. A line/character past
+// the end of the text clamps to len(text).
+func lspPositionToOffset(text string, pos protocol.Position) int {
+	lineStart := 0
+	for line := 0; line < int(pos.Line); line++ {
+		idx := strings.IndexByte(text[lineStart:], '\n')
+		if idx < 0 {
+			return len(text)
+		}
+		lineStart += idx + 1
+	}
+
+	lineEnd := len(text)
+	if idx := strings.IndexByte(text[lineStart:], '\n'); idx >= 0 {
+		lineEnd = lineStart + idx
+	}
+
+	units := utf16.Encode([]rune(text[lineStart:lineEnd]))
+	if int(pos.Character) >= len(units) {
+		return lineEnd
+	}
+	return lineStart + len(string(utf16.Decode(units[:pos.Character])))
 }

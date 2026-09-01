@@ -180,12 +180,55 @@ local function check_treesitter(fixture_path)
   pass("tree-sitter parser active on " .. fixture .. " with no ERROR nodes")
 end
 
+-- Check: textDocument/hover at a given 0-based line/character returns
+-- markdown content containing expect_substring.
+local function check_hover(fixture, line, character, expect_substring)
+  local path = vim.fn.fnamemodify(fixture, ":p")
+  vim.cmd.edit({ path, bang = true })
+
+  local attached = vim.wait(3000, function()
+    local clients = vim.lsp.get_clients({ name = "edifact_ls", bufnr = 0 })
+    return #clients > 0 and clients[1].initialized == true
+  end, 50)
+  if not attached then
+    fail("edifact_ls LSP client did not attach to " .. path .. " within timeout")
+    return
+  end
+
+  local params = {
+    textDocument = vim.lsp.util.make_text_document_params(0),
+    position = { line = line, character = character },
+  }
+  local results = vim.lsp.buf_request_sync(0, "textDocument/hover", params, 3000)
+
+  local found = false
+  for _, res in pairs(results or {}) do
+    local hover = res.result
+    if hover and hover.contents and hover.contents.value
+        and hover.contents.value:find(expect_substring, 1, true) then
+      found = true
+    end
+  end
+
+  if not found then
+    fail("hover at " .. path .. ":" .. line .. ":" .. character ..
+      " did not include a message containing " .. vim.inspect(expect_substring) ..
+      "; got: " .. vim.inspect(results))
+    return
+  end
+
+  pass("hover at " .. path .. ":" .. line .. ":" .. character ..
+    " includes a message containing " .. vim.inspect(expect_substring))
+end
+
 check_lsp_attaches()
 check_diagnostic("testdata/syntax-error.edi", "invalid segment tag", vim.diagnostic.severity.ERROR)
 check_diagnostic("testdata/envelope-error.edi", "missing UNZ", vim.diagnostic.severity.ERROR)
 check_diagnostic("testdata/lint-warning.edi", "reserved", vim.diagnostic.severity.WARN)
 check_diagnostic("testdata/lint-info.edi", "version 4", vim.diagnostic.severity.INFO)
 check_diagnostic("testdata/iftmcs-violation.edi", "maximum of 1", vim.diagnostic.severity.ERROR)
+check_hover("testdata/minimal.edi", 0, 1, "Interchange header")
+check_hover("testdata/minimal.edi", 2, 1, "Beginning of message")
 check_formatting()
 check_minify()
 check_treesitter()

@@ -68,15 +68,19 @@ func TestHandshake(t *testing.T) {
 	if initResult.ServerInfo == nil || initResult.ServerInfo.Name != Name {
 		t.Fatalf("unexpected serverInfo: %+v", initResult.ServerInfo)
 	}
+	if hp, ok := initResult.Capabilities.HoverProvider.(bool); !ok || !hp {
+		t.Fatalf("Capabilities.HoverProvider = %+v, want true", initResult.Capabilities.HoverProvider)
+	}
 
 	if err := client.Notify(ctx, "initialized", protocol.InitializedParams{}); err != nil {
 		t.Fatalf("initialized notify: %v", err)
 	}
 
 	// An unhandled method should come back as a proper JSON-RPC error, not
-	// crash the connection.
+	// crash the connection. (textDocument/hover used to serve as this
+	// example; it's a real handled method now -- see hover_test.go.)
 	var unused any
-	err = client.Call(ctx, "textDocument/hover", struct{}{}, &unused)
+	err = client.Call(ctx, "textDocument/definition", struct{}{}, &unused)
 	rpcErr, ok := err.(*jsonrpc2.Error)
 	if !ok || rpcErr.Code != jsonrpc2.CodeMethodNotFound {
 		t.Fatalf("expected method-not-found error, got: %v", err)

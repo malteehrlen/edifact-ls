@@ -45,6 +45,7 @@ func New() *Server {
 		TextDocumentDidChange:   st.textDocumentDidChange,
 		TextDocumentDidClose:    st.textDocumentDidClose,
 		TextDocumentFormatting:  st.textDocumentFormatting,
+		TextDocumentHover:       st.textDocumentHover,
 		WorkspaceExecuteCommand: st.workspaceExecuteCommand,
 	}
 	// Deriving capabilities from the handler itself (rather than
