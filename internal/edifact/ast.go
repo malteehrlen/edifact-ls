@@ -85,11 +85,20 @@ func (s Segment) Element0(i int) *Element {
 // Component0 returns the first component's unescaped value of the element
 // at the given 0-based index, or "" if absent.
 func (s Segment) Component0(elementIndex int, d Delimiters) string {
+	return s.ComponentN(elementIndex, 0, d)
+}
+
+// ComponentN returns the unescaped value of the component at
+// componentIndex within the element at elementIndex, or "" if either is
+// out of range. Used to reach past the first component -- e.g. UNH's S009
+// message identifier composite packs message type, version, release, and
+// controlling agency into elementIndex 1's four components.
+func (s Segment) ComponentN(elementIndex, componentIndex int, d Delimiters) string {
 	el := s.Element0(elementIndex)
-	if el == nil || len(el.Components) == 0 {
+	if el == nil || componentIndex < 0 || componentIndex >= len(el.Components) {
 		return ""
 	}
-	return el.Components[0].Value(d)
+	return el.Components[componentIndex].Value(d)
 }
 
 // UNAAdvice is the optional service string advice segment that redefines

@@ -185,6 +185,7 @@ check_diagnostic("testdata/syntax-error.edi", "invalid segment tag", vim.diagnos
 check_diagnostic("testdata/envelope-error.edi", "missing UNZ", vim.diagnostic.severity.ERROR)
 check_diagnostic("testdata/lint-warning.edi", "reserved", vim.diagnostic.severity.WARN)
 check_diagnostic("testdata/lint-info.edi", "version 4", vim.diagnostic.severity.INFO)
+check_diagnostic("testdata/iftmcs-violation.edi", "maximum of 1", vim.diagnostic.severity.ERROR)
 check_formatting()
 check_minify()
 check_treesitter()

@@ -68,12 +68,10 @@ func (st *state) publishDiagnostics(context *glsp.Context, uri protocol.Document
 	})
 }
 
-// diagnosticsForText parses, envelope-validates, and lints text and
-// translates the resulting structured errors into LSP diagnostics.
+// diagnosticsForText runs edifact.Validate over text and translates the
+// resulting structured errors into LSP diagnostics.
 func diagnosticsForText(text string) []protocol.Diagnostic {
-	ic, errs := edifact.Parse(text)
-	errs = append(errs, edifact.ValidateEnvelopes(ic)...)
-	errs = append(errs, edifact.Lint(ic)...)
+	_, errs := edifact.Validate(text)
 
 	source := Name
 	diagnostics := make([]protocol.Diagnostic, 0, len(errs))

@@ -4,8 +4,10 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 
+	"github.com/malteehrlen/edifact-ls/internal/edifact"
 	"github.com/malteehrlen/edifact-ls/internal/lspserver"
 )
 
@@ -17,8 +19,14 @@ func main() {
 			return
 		case "--help", "-help", "-h":
 			fmt.Printf("%s speaks LSP over stdio; run it from an editor, not a terminal.\n", lspserver.Name)
-			fmt.Println("Usage: edifact-ls [--version]")
+			fmt.Println("Usage: edifact-ls [--version] [--help] | check <file>")
 			return
+		case "check":
+			if len(os.Args) < 3 {
+				fmt.Fprintln(os.Stderr, "usage: edifact-ls check <file>")
+				os.Exit(2)
+			}
+			os.Exit(runCheck(os.Stdout, os.Args[2]))
 		}
 	}
 
@@ -30,4 +38,26 @@ func main() {
 	}
 
 	os.Exit(srv.ExitCode())
+}
+
+// runCheck parses and validates the EDIFACT file at path exactly as the
+// LSP server would, printing every diagnostic to w (one per line, as
+// "line:col: severity: message"). It returns 1 if any error-severity
+// diagnostic was found (or the file couldn't be read), 0 otherwise -- for
+// scripted/CI use independent of the editor.
+func runCheck(w io.Writer, path string) int {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		fmt.Fprintln(w, err)
+		return 1
+	}
+
+	_, errs := edifact.Validate(string(data))
+	for _, e := range errs {
+		fmt.Fprintln(w, e)
+	}
+	if errs.HasErrors() {
+		return 1
+	}
+	return 0
 }
