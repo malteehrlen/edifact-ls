@@ -5,7 +5,7 @@ status: completed
 type: feature
 priority: normal
 created_at: 2026-09-01T13:03:03Z
-updated_at: 2026-09-01T14:09:15Z
+updated_at: 2026-09-01T14:22:49Z
 parent: edifact-ls-nr8g
 blocked_by:
     - edifact-ls-l8pq
@@ -40,3 +40,14 @@ the intended capture (evidence: segment tags -> keyword, delimiters ->
 punctuation.delimiter, values -> string, in that exact CLI output). Full
 in-editor rendering is verified end-to-end once the parser is registered
 with nvim, which is story edifact-ls-87s0's job.
+
+## Interactive verification
+Confirmed live in a real (non-headless) nvim session against
+`testdata/minimal.edi`: segment tags + delimiters (`@keyword`/
+`@punctuation.delimiter`) render as one color, data values (`@string`) as a
+distinctly different one -- matching the query's intent. Neovim's bare
+built-in theme (no colorscheme loaded) doesn't visually distinguish
+`@keyword` from `@punctuation.delimiter` (same base color, tags just bold),
+which briefly looked like "nothing highlighted" before checking with two
+colors present; a real colorscheme would spread these standard capture
+names across more distinct colors.
