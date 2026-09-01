@@ -51,6 +51,8 @@ runtime.
   reverse direction is just `vim.lsp.buf.format()` (`textDocument/formatting`),
   since formatting already produces the human-readable multiline form.
 
+![edifact-ls: syntax highlighting, diagnostics, formatting, and minify in Neovim](edifact-ls.gif)
+
 ## Development
 
 Project status and planned work are tracked as "beans" (via the `beans`
