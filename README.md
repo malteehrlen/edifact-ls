@@ -1,10 +1,49 @@
 # edifact-ls
 
 A language server for [UN/EDIFACT](https://en.wikipedia.org/wiki/EDIFACT)
-files: formatting, syntax highlighting, and linting/validation, designed to
-work with Neovim.
+files, built for Neovim — real message-specification validation, not just
+syntax checking.
 
 Disclamer: This project is 100% generated code.
+
+![edifact-ls: syntax highlighting, diagnostics, formatting, and minify in Neovim](edifact-ls.gif)
+
+## Features
+
+**Diagnostics**
+
+- Syntax errors — malformed segments, tags, and delimiters.
+- Envelope structure — UNB/UNZ, UNG/UNE, and UNH/UNT pairing, counts, and
+  references.
+- Linting — reserved `UN`-prefixed segment tags, redundant `UNA` service
+  string advice (version-aware: distinguishes ISO 9735 versions 1–3 vs. 4
+  conventions).
+- Message-specification validation — segment/group presence, order, and
+  repeat counts checked against the real UN/EDIFACT branching diagram for
+  11 message types (IFTMCS, ORDERS, ORDRSP, INVOIC, DESADV, IFTMIN,
+  IFTSTA, PRICAT, INVRPT, DELFOR, APERAK), not a hand-rolled
+  approximation — each transcribed and verified against UNECE's own
+  segment tables.
+- Content validation — mandatory data element/component presence checked
+  within individual segments (BGM, DTM, CTA), independent of message
+  type.
+
+**Editing**
+
+- Hover — segment tag name and description, sourced from the UN/EDIFACT
+  Segment Directory.
+- Formatting — single-line "wire" format ⇄ human-readable multiline, via
+  `textDocument/formatting` and the `:EdifactMinify` command.
+- Syntax highlighting via a [tree-sitter](https://tree-sitter.github.io/tree-sitter/)
+  grammar.
+
+**Tooling**
+
+- `edifact-ls check <file>` — a CLI subcommand running the same
+  validation pipeline as the editor, for CI and scripts. Exits non-zero
+  on any error-severity diagnostic.
+
+A single static binary, no runtime dependencies, Linux amd64/arm64.
 
 ## Installation
 
@@ -31,12 +70,10 @@ release binary, or to build from a specific commit:
 go install ./cmd/edifact-ls    # from a checkout of this repo (or: make install)
 ```
 
-This uses your Go toolchain's normal `$GOBIN`, usually already on `$PATH`.
-If you're doing this from an activated Hermit shell in this repo
-specifically, note that Hermit points `$GOBIN` at its own `.hermit/go/bin/`,
-which is only on `$PATH` while that shell is active — not useful for a
-persistent global config. Either install with your own (non-Hermit) Go
-toolchain, or point `GOBIN` somewhere already on your `$PATH`, e.g.
+This uses your Go toolchain's `$GOBIN`, usually already on `$PATH`. From an
+activated Hermit shell in this repo, note that Hermit points `$GOBIN` at its
+own `.hermit/go/bin/`, which isn't useful for a persistent global config —
+either use your own Go toolchain, or set `GOBIN` explicitly, e.g.
 `GOBIN="$HOME/.local/bin" go install ./cmd/edifact-ls`.
 
 **2. Copy `editors/nvim/standalone_lsp.lua` into your config** (e.g.
@@ -86,7 +123,12 @@ runtime.
   reverse direction is just `vim.lsp.buf.format()` (`textDocument/formatting`),
   since formatting already produces the human-readable multiline form.
 
-![edifact-ls: syntax highlighting, diagnostics, formatting, and minify in Neovim](edifact-ls.gif)
+### CLI
+
+`edifact-ls check <file>` parses and validates a file — the same pipeline
+the editor uses — without starting the language server. Prints each
+diagnostic as `line:col: severity: message` and exits `1` if any is
+error-severity, `0` otherwise. Useful in CI or a pre-commit hook.
 
 ## Development
 
