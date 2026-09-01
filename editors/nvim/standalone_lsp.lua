@@ -1,6 +1,6 @@
 -- Example standalone LSP config for edifact-ls, meant to be copied into (or
 -- required from) YOUR OWN Neovim config -- unlike editors/nvim/init.lua
--- (this repo's dev/test harness, which points at an unstinstalled local
+-- (this repo's dev/test harness, which points at an uninstalled local
 -- build via $EDIFACT_LS_BIN), this expects `edifact-ls` to already be
 -- installed and discoverable on $PATH.
 --
