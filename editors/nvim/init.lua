@@ -30,3 +30,15 @@ vim.lsp.config("edifact_ls", {
 })
 
 vim.lsp.enable("edifact_ls")
+
+vim.api.nvim_create_user_command("EdifactMinify", function()
+  local client = vim.lsp.get_clients({ name = "edifact_ls", bufnr = 0 })[1]
+  if not client then
+    vim.notify("edifact_ls is not attached to this buffer", vim.log.levels.WARN)
+    return
+  end
+  client:exec_cmd({
+    command = "edifact-ls.minify",
+    arguments = { vim.uri_from_bufnr(0) },
+  }, { bufnr = 0 })
+end, { desc = "Collapse the current EDIFACT buffer to single-line wire format" })

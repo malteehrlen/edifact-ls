@@ -44,6 +44,13 @@ make build
 EDIFACT_LS_BIN="$(pwd)/dist/edifact-ls" nvim -u editors/nvim/init.lua testdata/minimal.edi
 ```
 
+### Commands
+
+- `:EdifactMinify` — collapses the current buffer to single-line "wire"
+  EDIFACT (segments joined by their terminator only, no newlines). The
+  reverse direction is just `vim.lsp.buf.format()` (`textDocument/formatting`),
+  since formatting already produces the human-readable multiline form.
+
 ## e2e test harness
 
 `scripts/e2e.sh` builds nothing itself (run `make build` first, or use
@@ -62,5 +69,6 @@ stderr.
 **Adding a new e2e check:** add a fixture under `testdata/` if needed, then
 add a `check_*` function to `scripts/e2e_check.lua` following the existing
 `check_lsp_attaches` example — call `fail("reason")` on the first problem
-found, or fall through silently/`pass("...")` on success. The script calls
-`cquit 1` if anything failed, `qa` (exit 0) otherwise.
+found, or `pass("...")` on success. The script calls `cquit 1` if anything
+failed, `qa!` (exit 0) otherwise — the `!` is needed because checks may
+leave buffers modified without saving (e.g. after formatting/minifying).

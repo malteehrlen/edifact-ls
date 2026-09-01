@@ -38,4 +38,9 @@ fi
 echo "Using nvim: $NVIM_BIN ($("$NVIM_BIN" --version | head -1))" >&2
 echo "Using edifact-ls: $EDIFACT_LS_BIN" >&2
 
-"$NVIM_BIN" --headless -u editors/nvim/init.lua -c "luafile scripts/e2e_check.lua"
+# noswapfile: checks intentionally leave buffers modified without saving
+# (e.g. after formatting), and a leftover swapfile from a prior run --
+# crashed, killed, or interrupted -- would otherwise block a later run on
+# the same fixture behind an interactive "ATTENTION" prompt headless nvim
+# can't answer.
+"$NVIM_BIN" --headless -u editors/nvim/init.lua --cmd "set noswapfile" -c "luafile scripts/e2e_check.lua"
