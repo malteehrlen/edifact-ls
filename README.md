@@ -63,6 +63,51 @@ parser — see `tree-sitter-edifact/README.md` for how to build it and enable
 it in the dev harness (via `EDIFACT_TS_PARSER`/`EDIFACT_TS_HIGHLIGHTS`).
 `scripts/e2e.sh` builds and wires it in automatically.
 
+## Installing for your own Neovim config
+
+Everything above is this repo's dev/test harness (points at an
+uninstalled local build via env vars) — this section is for using
+edifact-ls from your own, separate Neovim config.
+
+**1. Install the binary onto `$PATH`:**
+
+```sh
+go install ./cmd/edifact-ls    # or: make install
+```
+
+This uses your Go toolchain's normal `$GOBIN`, usually already on `$PATH`.
+If you're doing this from an activated Hermit shell in this repo
+specifically, note that Hermit points `$GOBIN` at its own `.hermit/go/bin/`,
+which is only on `$PATH` while that shell is active — not useful for a
+persistent global config. Either install with your own (non-Hermit) Go
+toolchain, or point `GOBIN` somewhere already on your `$PATH`, e.g.
+`GOBIN="$HOME/.local/bin" go install ./cmd/edifact-ls`.
+
+**2. Copy `editors/nvim/standalone_lsp.lua` into your config** (e.g.
+`require`d from your `init.lua`, or its contents pasted in directly). It
+registers filetype detection, the LSP server (via built-in
+`vim.lsp.config`/`vim.lsp.enable` — no `nvim-lspconfig` dependency required,
+though it'll work fine alongside it), and the `:EdifactMinify` command.
+
+**3. For syntax highlighting**, also build and install the tree-sitter
+parser, then copy `editors/nvim/standalone_treesitter.lua` in the same way:
+
+```sh
+cd tree-sitter-edifact
+npm install
+npx tree-sitter build -o edifact.so
+mkdir -p ~/.local/share/edifact-ls
+cp edifact.so queries/highlights.scm ~/.local/share/edifact-ls/
+```
+
+(Adjust the target directory and `EDIFACT_TS_DIR` at the top of
+`standalone_treesitter.lua` together if you'd rather put it somewhere else.)
+
+Both files are self-contained and don't depend on the rest of this repo at
+runtime — verified against a genuinely separate config (`nvim -u
+/some/other/init.lua`) pointed at nothing but an installed binary and the
+copied-in parser files.
+
 ## e2e test harness
 
 `scripts/e2e.sh` builds nothing itself (run `make build` first, or use

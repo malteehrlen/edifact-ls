@@ -14,6 +14,10 @@ test:
 test-e2e: build
 	EDIFACT_LS_BIN=$(abspath $(BIN)) ./scripts/e2e.sh
 
+.PHONY: install
+install:
+	$(GO) install ./cmd/edifact-ls
+
 .PHONY: clean
 clean:
 	rm -f $(BIN)
