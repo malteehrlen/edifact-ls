@@ -1,8 +1,8 @@
 -- Headless e2e checks for edifact-ls, run via scripts/e2e.sh under
 -- `nvim --headless -u editors/nvim/init.lua`. Add new checks as new features
--- land (highlighting, diagnostics, formatting); each should call fail() on
--- the first problem it finds so the harness exits non-zero with a clear
--- reason, and pass() should only be called once, at the very end.
+-- land (highlighting, formatting); each should call fail() on the first
+-- problem it finds so the harness exits non-zero with a clear reason, and
+-- pass() may be called once per check on success.
 
 local failed = false
 
@@ -33,7 +33,38 @@ local function check_lsp_attaches()
   pass("edifact_ls attached to " .. fixture)
 end
 
+-- Check: opening a fixture with a known problem surfaces a diagnostic whose
+-- message contains the given substring.
+local function check_diagnostic(fixture, expect_substring)
+  local path = vim.fn.fnamemodify(fixture, ":p")
+  vim.cmd.edit(path)
+
+  local diags
+  local ok = vim.wait(3000, function()
+    diags = vim.diagnostic.get(0)
+    return #diags > 0
+  end, 50)
+
+  if not ok then
+    fail("no diagnostics appeared for " .. path .. " within timeout")
+    return
+  end
+
+  for _, d in ipairs(diags) do
+    if d.message:find(expect_substring, 1, true) then
+      pass("diagnostics for " .. path .. " include a message containing " .. vim.inspect(expect_substring))
+      return
+    end
+  end
+
+  local messages = vim.tbl_map(function(d) return d.message end, diags)
+  fail("diagnostics for " .. path .. " did not include a message containing " ..
+    vim.inspect(expect_substring) .. "; got: " .. vim.inspect(messages))
+end
+
 check_lsp_attaches()
+check_diagnostic("testdata/syntax-error.edi", "invalid segment tag")
+check_diagnostic("testdata/envelope-error.edi", "missing UNZ")
 
 if failed then
   vim.cmd("cquit 1")

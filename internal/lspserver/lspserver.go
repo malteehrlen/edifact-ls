@@ -3,6 +3,8 @@
 package lspserver
 
 import (
+	"sync"
+
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 	glspserver "github.com/tliron/glsp/server"
@@ -23,18 +25,24 @@ type Server struct {
 // state tracks session-lifecycle facts the handler funcs need across calls.
 type state struct {
 	shutdownReceived bool
+
+	docsMu    sync.Mutex
+	documents map[protocol.DocumentUri]string
 }
 
 // New builds a Server with no language features enabled yet beyond the base
 // initialize/initialized/shutdown/exit lifecycle.
 func New() *Server {
-	st := &state{}
+	st := &state{documents: map[protocol.DocumentUri]string{}}
 
 	handler := &protocol.Handler{
-		Initialize:  st.initialize,
-		Initialized: st.initialized,
-		Shutdown:    st.shutdown,
-		Exit:        st.exit,
+		Initialize:            st.initialize,
+		Initialized:           st.initialized,
+		Shutdown:              st.shutdown,
+		Exit:                  st.exit,
+		TextDocumentDidOpen:   st.textDocumentDidOpen,
+		TextDocumentDidChange: st.textDocumentDidChange,
+		TextDocumentDidClose:  st.textDocumentDidClose,
 	}
 
 	return &Server{
@@ -61,7 +69,9 @@ func (s *Server) ExitCode() int {
 
 func (st *state) initialize(context *glsp.Context, params *protocol.InitializeParams) (any, error) {
 	return protocol.InitializeResult{
-		Capabilities: protocol.ServerCapabilities{},
+		Capabilities: protocol.ServerCapabilities{
+			TextDocumentSync: protocol.TextDocumentSyncKindFull,
+		},
 		ServerInfo: &protocol.InitializeResultServerInfo{
 			Name:    Name,
 			Version: &Version,
