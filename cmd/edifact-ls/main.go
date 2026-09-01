@@ -10,6 +10,18 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "--version", "-version", "-v":
+			fmt.Println(lspserver.Version)
+			return
+		case "--help", "-help", "-h":
+			fmt.Printf("%s speaks LSP over stdio; run it from an editor, not a terminal.\n", lspserver.Name)
+			fmt.Println("Usage: edifact-ls [--version]")
+			return
+		}
+	}
+
 	srv := lspserver.New()
 
 	if err := srv.RunStdio(); err != nil {

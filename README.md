@@ -64,7 +64,8 @@ current backlog.
 ### Requirements
 
 - [Hermit](https://cashapp.github.io/hermit/) manages this repo's toolchain
-  (Go, Node.js/npm, `make`, the `beans` CLI). Activate it once per shell:
+  (Go, Node.js/npm, `make`, `goreleaser`, `actionlint`, the `beans` CLI).
+  Activate it once per shell:
 
   ```sh
   source bin/activate-hermit
@@ -83,6 +84,32 @@ current backlog.
 make build     # -> dist/edifact-ls
 make test      # go vet + go test ./...
 make test-e2e  # build + run the headless-nvim e2e harness (see below)
+```
+
+### Releasing
+
+Pushing a `vX.Y.Z` tag triggers `.github/workflows/release.yml`, which runs
+[goreleaser](https://goreleaser.com/) (config: `.goreleaser.yaml`) to
+cross-compile Linux amd64+arm64 binaries, with the version baked in via
+`-ldflags`, and publish them as a GitHub Release with a checksums file.
+
+```sh
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+To try the pipeline locally without publishing anything (useful when
+editing `.goreleaser.yaml`):
+
+```sh
+goreleaser release --snapshot --clean --skip=publish
+```
+
+To verify a downloaded release binary:
+
+```sh
+tar -xzf edifact-ls_<version>_linux_<arch>.tar.gz
+./edifact-ls --version
 ```
 
 ### Trying it in Neovim

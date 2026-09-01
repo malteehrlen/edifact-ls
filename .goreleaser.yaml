@@ -1,0 +1,42 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+
+project_name: edifact-ls
+
+# Separate from dist/edifact-ls, the single-binary output of `make build`.
+dist: dist/goreleaser
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: edifact-ls
+    main: ./cmd/edifact-ls
+    binary: edifact-ls
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X github.com/malteehrlen/edifact-ls/internal/lspserver.Version={{ .Version }}
+
+archives:
+  - id: edifact-ls
+    formats: [tar.gz]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^Backlog:"

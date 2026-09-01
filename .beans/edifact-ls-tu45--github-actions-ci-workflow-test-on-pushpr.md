@@ -1,11 +1,11 @@
 ---
 # edifact-ls-tu45
 title: GitHub Actions CI workflow (test on push/PR)
-status: todo
+status: in-progress
 type: feature
 priority: normal
 created_at: 2026-09-01T15:38:35Z
-updated_at: 2026-09-01T15:38:35Z
+updated_at: 2026-09-01T15:45:56Z
 parent: edifact-ls-u9x8
 ---
 
@@ -21,10 +21,10 @@ routing through Hermit there would add fragility (network-dependent
 bootstrap, cache-unfriendly) for no real benefit.
 
 # Acceptance Criteria
-- [ ] `.github/workflows/ci.yml` triggers on push and pull_request
-- [ ] Sets up Go (matching go.mod's version) and Node.js, installs a C
+- [x] `.github/workflows/ci.yml` triggers on push and pull_request
+- [x] Sets up Go (matching go.mod's version) and Node.js, installs a C
       compiler (build-essential), and runs `make test` and `make test-e2e`
-- [ ] The e2e job's Neovim download/tree-sitter build steps are cached
+- [x] The e2e job's Neovim download/tree-sitter build steps are cached
       appropriately so CI runs aren't slower than necessary
 - [ ] Verified: a pushed branch/PR actually triggers the workflow and it
       passes
