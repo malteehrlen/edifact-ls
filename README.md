@@ -8,7 +8,24 @@ Disclamer: This project is 100% generated code.
 
 ## Installation
 
-**1. Install the binary onto `$PATH`:**
+**1. Install the binary onto `$PATH`.** Linux only for now (amd64/arm64) —
+download the latest release from
+[GitHub Releases](https://github.com/malteehrlen/edifact-ls/releases):
+
+```sh
+os=linux
+arch=$(uname -m); case "$arch" in x86_64) arch=amd64 ;; aarch64) arch=arm64 ;; esac
+version=$(curl -fsSL https://api.github.com/repos/malteehrlen/edifact-ls/releases/latest | grep -m1 '"tag_name"' | cut -d'"' -f4)
+curl -fsSL -o edifact-ls.tar.gz \
+  "https://github.com/malteehrlen/edifact-ls/releases/download/${version}/edifact-ls_${version#v}_${os}_${arch}.tar.gz"
+tar -xzf edifact-ls.tar.gz
+mv edifact-ls ~/.local/bin/   # or wherever's already on your $PATH
+```
+
+(Optionally verify against `checksums.txt`, also attached to the release.)
+
+**Building from source** is also available, e.g. for a platform without a
+release binary, or to build from a specific commit:
 
 ```sh
 go install ./cmd/edifact-ls    # from a checkout of this repo (or: make install)
@@ -94,8 +111,8 @@ cross-compile Linux amd64+arm64 binaries, with the version baked in via
 `-ldflags`, and publish them as a GitHub Release with a checksums file.
 
 ```sh
-git tag v0.1.0
-git push origin v0.1.0
+git tag vX.Y.Z
+git push origin vX.Y.Z
 ```
 
 To try the pipeline locally without publishing anything (useful when
