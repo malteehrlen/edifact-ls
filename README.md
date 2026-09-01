@@ -6,8 +6,6 @@ syntax checking.
 
 Disclamer: This project is 100% generated code.
 
-![edifact-ls: syntax highlighting, diagnostics, formatting, and minify in Neovim](edifact-ls.gif)
-
 ## Features
 
 **Diagnostics**
