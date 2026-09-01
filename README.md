@@ -45,9 +45,25 @@ registers filetype detection, the LSP server (via built-in
 `vim.lsp.config`/`vim.lsp.enable` — no `nvim-lspconfig` dependency required,
 though it'll work fine alongside it), and the `:EdifactMinify` command.
 
-**3. For syntax highlighting**, also build and install the tree-sitter
-parser (requires Node.js/npm and a C compiler), then copy
-`editors/nvim/standalone_treesitter.lua` in the same way:
+**3. For syntax highlighting**, also install the tree-sitter parser, then
+copy `editors/nvim/standalone_treesitter.lua` in the same way. Releases
+include prebuilt `linux/amd64` and `linux/arm64` archives alongside the LSP
+binary:
+
+```sh
+os=linux
+arch=$(uname -m); case "$arch" in x86_64) arch=amd64 ;; aarch64) arch=arm64 ;; esac
+version=$(curl -fsSL https://api.github.com/repos/malteehrlen/edifact-ls/releases/latest | grep -m1 '"tag_name"' | cut -d'"' -f4)
+mkdir -p ~/.local/share/edifact-ls
+curl -fsSL "https://github.com/malteehrlen/edifact-ls/releases/download/${version}/tree-sitter-edifact_${version#v}_${os}_${arch}.tar.gz" \
+  | tar -xz -C ~/.local/share/edifact-ls
+```
+
+(Optionally verify against the matching `.tar.gz.sha256` file, also
+attached to the release.)
+
+**Building it locally** is also available (requires Node.js/npm and a C
+compiler):
 
 ```sh
 cd tree-sitter-edifact
@@ -105,10 +121,16 @@ make test-e2e  # build + run the headless-nvim e2e harness (see below)
 
 ### Releasing
 
-Pushing a `vX.Y.Z` tag triggers `.github/workflows/release.yml`, which runs
-[goreleaser](https://goreleaser.com/) (config: `.goreleaser.yaml`) to
-cross-compile Linux amd64+arm64 binaries, with the version baked in via
-`-ldflags`, and publish them as a GitHub Release with a checksums file.
+Pushing a `vX.Y.Z` tag triggers `.github/workflows/release.yml`, which:
+
+1. Runs [goreleaser](https://goreleaser.com/) (config: `.goreleaser.yaml`)
+   to cross-compile Linux amd64+arm64 LSP binaries, with the version baked
+   in via `-ldflags`, and publish them as a GitHub Release with a
+   checksums file.
+2. Builds the tree-sitter parser natively on a linux/amd64 and a
+   linux/arm64 runner (it's a compiled C shared library, so unlike the Go
+   binary it can't be cross-compiled from one machine) and uploads those
+   archives to the same release.
 
 ```sh
 git tag vX.Y.Z

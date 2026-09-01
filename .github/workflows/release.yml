@@ -27,3 +27,49 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  treesitter:
+    needs: goreleaser
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install a C compiler
+        run: sudo apt-get update && sudo apt-get install -y build-essential
+
+      - name: Build the tree-sitter parser
+        working-directory: tree-sitter-edifact
+        run: |
+          npm install
+          npx tree-sitter build -o edifact.so
+
+      # Packaged separately from goreleaser's own archives -- edifact.so is
+      # a compiled C shared library, architecture-specific, and built
+      # natively per matrix leg rather than cross-compiled.
+      - name: Package
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          name="tree-sitter-edifact_${version}_linux_${{ matrix.arch }}"
+          mkdir pkg
+          cp tree-sitter-edifact/edifact.so tree-sitter-edifact/queries/highlights.scm pkg/
+          tar -czf "${name}.tar.gz" -C pkg .
+          sha256sum "${name}.tar.gz" > "${name}.tar.gz.sha256"
+
+      # A per-archive .sha256 sidecar rather than one shared checksums
+      # file: the two matrix legs run in parallel and would otherwise race
+      # on read-modify-write of a single shared file.
+      - name: Upload to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "$GITHUB_REF_NAME" tree-sitter-edifact_*.tar.gz tree-sitter-edifact_*.tar.gz.sha256 --clobber
