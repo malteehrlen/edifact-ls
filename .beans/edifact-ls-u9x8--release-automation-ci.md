@@ -1,11 +1,11 @@
 ---
 # edifact-ls-u9x8
 title: Release automation & CI
-status: in-progress
+status: completed
 type: epic
 priority: normal
 created_at: 2026-09-01T15:38:19Z
-updated_at: 2026-09-01T16:01:42Z
+updated_at: 2026-09-01T16:15:04Z
 parent: edifact-ls-gdt6
 ---
 

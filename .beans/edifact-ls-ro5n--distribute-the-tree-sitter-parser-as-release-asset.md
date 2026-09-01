@@ -1,11 +1,11 @@
 ---
 # edifact-ls-ro5n
 title: Distribute the tree-sitter parser as release assets
-status: in-progress
+status: completed
 type: feature
 priority: normal
 created_at: 2026-09-01T16:01:42Z
-updated_at: 2026-09-01T16:03:07Z
+updated_at: 2026-09-01T16:15:04Z
 parent: edifact-ls-u9x8
 blocked_by:
     - edifact-ls-f31a
@@ -36,6 +36,16 @@ server, not on its own release cadence.
       documented default in the syntax-highlighting install step, with
       building it locally (`npm install` + `tree-sitter build`) kept as an
       alternative
-- [ ] Verified end-to-end: a real tagged release has the tree-sitter
+- [x] Verified end-to-end: a real tagged release has the tree-sitter
       archives attached alongside the LSP binaries, and a downloaded
       archive's `edifact.so` actually loads and highlights in nvim
+
+## Summary of Changes
+Verified for real against the published v0.1.2 release: all 7 expected
+assets present (2 LSP binaries, 2 tree-sitter archives, 2 .sha256 sidecars,
+1 checksums.txt). Downloaded `tree-sitter-edifact_0.1.2_linux_amd64.tar.gz`,
+confirmed its sha256 matches the sidecar file, confirmed it extracts flat
+(edifact.so + highlights.scm, no wrapping directory), and loaded it through
+`standalone_treesitter.lua` (pointed at the extracted files) in a real nvim
+session against `testdata/minimal.edi`: the parser attaches with no errors
+and the highlighter actually activates.
