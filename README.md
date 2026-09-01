@@ -4,6 +4,8 @@ A language server for [UN/EDIFACT](https://en.wikipedia.org/wiki/EDIFACT)
 files: formatting, syntax highlighting, and linting/validation, designed to
 work with Neovim.
 
+Disclamer: This project is 100% generated code.
+
 ## Installation
 
 **1. Install the binary onto `$PATH`:**
