@@ -58,18 +58,19 @@ func (s Severity) String() string {
 }
 
 // Validate runs the full validation pipeline this package offers -- Parse,
-// then ValidateEnvelopes, Lint, and ValidateMessageSchemas layered on top
-// of its result -- and returns the parsed Interchange alongside every
-// diagnostic collected along the way, in that order. This is the single
-// place that sequence is assembled, shared by the LSP server's
-// publishDiagnostics path and the `edifact-ls check` CLI command, so a
-// future check added to the pipeline can't land in one and be forgotten
-// in the other.
+// then ValidateEnvelopes, Lint, ValidateMessageSchemas, and
+// ValidateSegmentContent layered on top of its result -- and returns the
+// parsed Interchange alongside every diagnostic collected along the way,
+// in that order. This is the single place that sequence is assembled,
+// shared by the LSP server's publishDiagnostics path and the
+// `edifact-ls check` CLI command, so a future check added to the
+// pipeline can't land in one and be forgotten in the other.
 func Validate(src string) (*Interchange, ErrorList) {
 	ic, errs := Parse(src)
 	errs = append(errs, ValidateEnvelopes(ic)...)
 	errs = append(errs, Lint(ic)...)
 	errs = append(errs, ValidateMessageSchemas(ic)...)
+	errs = append(errs, ValidateSegmentContent(ic)...)
 	return ic, errs
 }
 

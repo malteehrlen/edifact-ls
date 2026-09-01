@@ -227,6 +227,7 @@ check_diagnostic("testdata/envelope-error.edi", "missing UNZ", vim.diagnostic.se
 check_diagnostic("testdata/lint-warning.edi", "reserved", vim.diagnostic.severity.WARN)
 check_diagnostic("testdata/lint-info.edi", "version 4", vim.diagnostic.severity.INFO)
 check_diagnostic("testdata/iftmcs-violation.edi", "maximum of 1", vim.diagnostic.severity.ERROR)
+check_diagnostic("testdata/content-violation.edi", "function code qualifier", vim.diagnostic.severity.ERROR)
 check_hover("testdata/minimal.edi", 0, 1, "Interchange header")
 check_hover("testdata/minimal.edi", 2, 1, "Beginning of message")
 check_formatting()
