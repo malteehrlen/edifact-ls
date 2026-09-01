@@ -10,11 +10,21 @@ type messageSpan struct {
 	segmentCount int // inclusive of UNH and, once found, UNT
 }
 
-// ValidateEnvelopes checks interchange- and message-level envelope
-// structure on top of an already-parsed Interchange: UNB/UNZ pairing with a
-// matching control count and control reference, and, for each message,
-// UNH/UNT pairing with a matching segment count and message reference
-// number. It only validates structure Parse itself doesn't know about
+// groupSpan tracks one UNG..UNE functional group while scanning an
+// interchange's flat segment list.
+type groupSpan struct {
+	ung      *Segment
+	une      *Segment
+	messages []*messageSpan // messages (UNH..UNT spans) found inside this group
+}
+
+// ValidateEnvelopes checks interchange-, functional-group-, and
+// message-level envelope structure on top of an already-parsed
+// Interchange: UNB/UNZ pairing with a matching control count and control
+// reference, UNG/UNE pairing (if functional grouping is used) with a
+// matching message count and group reference, UNH/UNT pairing for each
+// message with a matching segment count and message reference number, and
+// UNS's value. It only validates structure Parse itself doesn't know about
 // (which segments are semantically special) — it assumes Interchange.Segments
 // already reflects whatever was syntactically parsed, valid or not.
 func ValidateEnvelopes(ic *Interchange) ErrorList {
@@ -23,13 +33,17 @@ func ValidateEnvelopes(ic *Interchange) ErrorList {
 	interchangeStart := Position{Line: 1, Column: 1}
 
 	var unb, unz *Segment
-	var messages []*messageSpan
-	var cur *messageSpan
+	var allMessages []*messageSpan
+	var groups []*groupSpan
+	var curGroup *groupSpan
+	var curMsg *messageSpan
+	sawGroupedMessage := false
+	sawUngroupedMessage := false
 
 	for i := range ic.Segments {
 		seg := &ic.Segments[i]
-		if cur != nil {
-			cur.segmentCount++
+		if curMsg != nil {
+			curMsg.segmentCount++
 		}
 
 		switch seg.Tag {
@@ -45,20 +59,47 @@ func ValidateEnvelopes(ic *Interchange) ErrorList {
 			} else {
 				unz = seg
 			}
-		case "UNH":
-			if cur != nil {
-				errs.Add(seg.Pos, SeverityError, "UNH message header found before previous message (ref %q) was closed with UNT", cur.unh.Component0(0, d))
+		case "UNG":
+			if curGroup != nil {
+				errs.Add(seg.Pos, SeverityError, "UNG functional group header found before previous group (ref %q) was closed with UNE", curGroup.ung.Component0(4, d))
 			}
-			cur = &messageSpan{unh: seg, segmentCount: 1}
-			messages = append(messages, cur)
+			curGroup = &groupSpan{ung: seg}
+			groups = append(groups, curGroup)
+		case "UNE":
+			if curGroup == nil {
+				errs.Add(seg.Pos, SeverityError, "UNE functional group trailer found without a preceding UNG")
+			} else {
+				curGroup.une = seg
+				curGroup = nil
+			}
+		case "UNH":
+			if curMsg != nil {
+				errs.Add(seg.Pos, SeverityError, "UNH message header found before previous message (ref %q) was closed with UNT", curMsg.unh.Component0(0, d))
+			}
+			curMsg = &messageSpan{unh: seg, segmentCount: 1}
+			allMessages = append(allMessages, curMsg)
+			if curGroup != nil {
+				curGroup.messages = append(curGroup.messages, curMsg)
+				sawGroupedMessage = true
+			} else {
+				sawUngroupedMessage = true
+			}
 		case "UNT":
-			if cur == nil {
+			if curMsg == nil {
 				errs.Add(seg.Pos, SeverityError, "UNT message trailer found without a preceding UNH")
 			} else {
-				cur.unt = seg
-				cur = nil
+				curMsg.unt = seg
+				curMsg = nil
+			}
+		case "UNS":
+			if val := seg.Component0(0, d); val != "D" && val != "S" {
+				errs.Add(seg.Pos, SeverityError, "UNS section control value %q, want \"D\" or \"S\"", val)
 			}
 		}
+	}
+
+	if sawGroupedMessage && sawUngroupedMessage {
+		errs.Add(interchangeStart, SeverityError, "interchange mixes messages inside functional groups (UNG/UNE) with messages outside any group, which is not permitted")
 	}
 
 	if unb == nil {
@@ -69,17 +110,44 @@ func ValidateEnvelopes(ic *Interchange) ErrorList {
 	}
 	if unb != nil && unz != nil {
 		wantRef := unb.Component0(4, d)
-		wantCount := strconv.Itoa(len(messages))
+		// UNZ's control count means the number of functional groups when
+		// grouping is used, or the number of messages otherwise.
+		var wantCount string
+		var countMeaning string
+		if len(groups) > 0 {
+			wantCount = strconv.Itoa(len(groups))
+			countMeaning = "number of functional groups in the interchange"
+		} else {
+			wantCount = strconv.Itoa(len(allMessages))
+			countMeaning = "number of messages in the interchange"
+		}
 
 		if gotCount := unz.Component0(0, d); gotCount != wantCount {
-			errs.Add(unz.Pos, SeverityError, "UNZ interchange control count is %q, want %q (number of messages in the interchange)", gotCount, wantCount)
+			errs.Add(unz.Pos, SeverityError, "UNZ interchange control count is %q, want %q (%s)", gotCount, wantCount, countMeaning)
 		}
 		if gotRef := unz.Component0(1, d); gotRef != wantRef {
 			errs.Add(unz.Pos, SeverityError, "UNZ interchange control reference %q does not match UNB's %q", gotRef, wantRef)
 		}
 	}
 
-	for _, m := range messages {
+	for _, g := range groups {
+		if g.une == nil {
+			errs.Add(g.ung.Pos, SeverityError, "UNG functional group (ref %q) is missing its UNE trailer", g.ung.Component0(4, d))
+			continue
+		}
+
+		wantCount := strconv.Itoa(len(g.messages))
+		if gotCount := g.une.Component0(0, d); gotCount != wantCount {
+			errs.Add(g.une.Pos, SeverityError, "UNE number of messages is %q, want %q", gotCount, wantCount)
+		}
+
+		wantRef := g.ung.Component0(4, d)
+		if gotRef := g.une.Component0(1, d); gotRef != wantRef {
+			errs.Add(g.une.Pos, SeverityError, "UNE functional group reference %q does not match UNG's %q", gotRef, wantRef)
+		}
+	}
+
+	for _, m := range allMessages {
 		if m.unt == nil {
 			errs.Add(m.unh.Pos, SeverityError, "UNH message (ref %q) is missing its UNT trailer", m.unh.Component0(0, d))
 			continue

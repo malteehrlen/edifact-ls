@@ -1,11 +1,11 @@
 ---
 # edifact-ls-0d7g
 title: Expand syntax coverage per the full UN/EDIFACT syntax rules
-status: todo
+status: in-progress
 type: epic
 priority: normal
 created_at: 2026-09-01T16:13:25Z
-updated_at: 2026-09-01T16:13:25Z
+updated_at: 2026-09-01T16:16:51Z
 parent: edifact-ls-gdt6
 ---
 
