@@ -31,9 +31,16 @@ module.exports = grammar({
     // Each '+' introduces an element; a wholly-empty element (nothing at
     // all between two '+'s, or between '+' and the terminator) leaves no
     // characters to build a node from, so it's simply absent from the tree
-    // -- there's nothing to highlight there either way.
+    // -- there's nothing to highlight there either way. The tag may also
+    // carry ':'-separated control-number components directly (no leading
+    // '+'), e.g. "GDS:1+..." -- "explicit representation" of a repeating
+    // segment, per section 9.5.1 of
+    // https://unece.org/DAM/trade/untdid/texts/d423.htm. Rare in modern
+    // usage but part of the formal syntax (mirrors
+    // internal/edifact/parser.go's consumeTagControlNumbers).
     segment: $ => seq(
       field('tag', $.segment_tag),
+      repeat(seq(':', field('control_number', $.data))),
       repeat(seq('+', optional(field('element', $.element)))),
       $.terminator,
     ),

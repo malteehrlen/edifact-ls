@@ -35,6 +35,10 @@ func Render(ic *Interchange, multiline bool) string {
 
 func renderSegment(b *strings.Builder, seg Segment, d Delimiters) {
 	b.WriteString(seg.Tag)
+	for _, cn := range seg.TagControlNumbers {
+		b.WriteByte(d.Component)
+		b.WriteString(cn)
+	}
 	for _, el := range seg.Elements {
 		b.WriteByte(d.Element)
 		for i, c := range el.Components {

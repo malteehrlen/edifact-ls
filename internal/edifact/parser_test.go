@@ -170,6 +170,67 @@ func TestParseErrorPositionIsAccurate(t *testing.T) {
 	}
 }
 
+func TestParseSegmentTagWithExplicitControlNumbers(t *testing.T) {
+	ic, errs := Parse("GDS:1:2+data'")
+	if len(errs) != 0 {
+		t.Fatalf("unexpected errors: %v", errs)
+	}
+	seg := ic.Segments[0]
+	if seg.Tag != "GDS" {
+		t.Errorf("Tag = %q, want %q", seg.Tag, "GDS")
+	}
+	if want := []string{"1", "2"}; !slicesEqual(seg.TagControlNumbers, want) {
+		t.Errorf("TagControlNumbers = %v, want %v", seg.TagControlNumbers, want)
+	}
+	if got := seg.Component0(0, ic.Delimiters); got != "data" {
+		t.Errorf("element 0 = %q, want %q (control numbers must not leak into Elements)", got, "data")
+	}
+}
+
+func TestParseSegmentTagWithoutControlNumbersUnaffected(t *testing.T) {
+	// Implicit representation (the common case, no control numbers) must
+	// parse exactly as before.
+	ic, errs := Parse("GDS+data'")
+	if len(errs) != 0 {
+		t.Fatalf("unexpected errors: %v", errs)
+	}
+	seg := ic.Segments[0]
+	if len(seg.TagControlNumbers) != 0 {
+		t.Errorf("TagControlNumbers = %v, want none", seg.TagControlNumbers)
+	}
+	if got := seg.Component0(0, ic.Delimiters); got != "data" {
+		t.Errorf("element 0 = %q, want %q", got, "data")
+	}
+}
+
+func TestParseSegmentTagWithControlNumberButNoElements(t *testing.T) {
+	// "GDS:1'" -- control number present, but the segment has no elements
+	// at all (terminator immediately follows).
+	ic, errs := Parse("GDS:1'")
+	if len(errs) != 0 {
+		t.Fatalf("unexpected errors: %v", errs)
+	}
+	seg := ic.Segments[0]
+	if want := []string{"1"}; !slicesEqual(seg.TagControlNumbers, want) {
+		t.Errorf("TagControlNumbers = %v, want %v", seg.TagControlNumbers, want)
+	}
+	if len(seg.Elements) != 0 {
+		t.Errorf("Elements = %+v, want none", seg.Elements)
+	}
+}
+
+func slicesEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
 func TestParseDoesNotPanic(t *testing.T) {
 	inputs := []string{
 		"",

@@ -25,6 +25,16 @@ func interchangeDataEqual(t *testing.T, a, b *Interchange) bool {
 			t.Logf("segment %d tag differs: %q vs %q", i, sa.Tag, sb.Tag)
 			return false
 		}
+		if len(sa.TagControlNumbers) != len(sb.TagControlNumbers) {
+			t.Logf("segment %d (%s) tag control numbers differ: %v vs %v", i, sa.Tag, sa.TagControlNumbers, sb.TagControlNumbers)
+			return false
+		}
+		for k := range sa.TagControlNumbers {
+			if sa.TagControlNumbers[k] != sb.TagControlNumbers[k] {
+				t.Logf("segment %d (%s) tag control number %d differs: %q vs %q", i, sa.Tag, k, sa.TagControlNumbers[k], sb.TagControlNumbers[k])
+				return false
+			}
+		}
 		if len(sa.Elements) != len(sb.Elements) {
 			t.Logf("segment %d (%s) element count differs: %d vs %d", i, sa.Tag, len(sa.Elements), len(sb.Elements))
 			return false
@@ -74,6 +84,21 @@ func TestRenderMultilineMinimalInterchange(t *testing.T) {
 	// be a no-op.
 	if out != string(data) {
 		t.Errorf("Render(multiline) of an already-formatted fixture changed it:\ngot:\n%s\nwant:\n%s", out, string(data))
+	}
+}
+
+func TestRenderPreservesTagControlNumbers(t *testing.T) {
+	src := "GDS:1:2+data'"
+	ic := mustParseClean(t, src)
+	out := Render(ic, true)
+	want := "GDS:1:2+data'\n"
+	if out != want {
+		t.Fatalf("Render(multiline) = %q, want %q", out, want)
+	}
+
+	reparsed := mustParseClean(t, out)
+	if !interchangeDataEqual(t, ic, reparsed) {
+		t.Fatalf("Render round-trip lost tag control numbers; output:\n%s", out)
 	}
 }
 

@@ -1,11 +1,11 @@
 ---
 # edifact-ls-jkaz
 title: Explicit repeat representation in segment tags
-status: todo
+status: completed
 type: feature
 priority: low
 created_at: 2026-09-01T16:14:05Z
-updated_at: 2026-09-01T16:14:05Z
+updated_at: 2026-09-01T16:24:41Z
 parent: edifact-ls-0d7g
 ---
 
@@ -28,14 +28,29 @@ worth being correct about rather than silently mangling real (if rare)
 input.
 
 # Acceptance Criteria
-- [ ] Lexer/parser recognize up to 9 colon-separated numeric control-number
+- [x] Lexer/parser recognize up to 9 colon-separated numeric control-number
       components immediately following the base tag, before the first
       element separator, as part of the segment tag rather than data
-- [ ] `Segment.Tag` stays just the base code (e.g. "GDS"); the control
+- [x] `Segment.Tag` stays just the base code (e.g. "GDS"); the control
       numbers are exposed separately (e.g. `Segment.TagControlNumbers
       []string`) rather than silently dropped or merged into Elements
-- [ ] tree-sitter grammar updated to parse and highlight this form without
+- [x] tree-sitter grammar updated to parse and highlight this form without
       producing ERROR nodes
-- [ ] Unit tests: both implicit (`GDS+...'`) and explicit
+- [x] Unit tests: both implicit (`GDS+...'`) and explicit
       (`GDS:1+...'`, `GDS:2+...'`) forms parse correctly and don't
       regress existing behavior for plain 3-letter tags
+
+## Summary of Changes
+`internal/edifact`: `Segment.TagControlNumbers []string` added.
+`consumeTagControlNumbers` (parser.go) speculatively consumes
+`(':' data)*` immediately after the tag, before element parsing begins,
+rewinding the lexer (position *and* any errors it emitted) if the pattern
+doesn't hold -- so plain 3-letter tags (the common case) are completely
+unaffected. `Render` re-emits control numbers so round-tripping stays
+lossless (extended `interchangeDataEqual` to actually check this, so a
+future regression here wouldn't silently pass). tree-sitter grammar updated
+in parallel with a `control_number` field on `segment`, same distinction.
+
+New unit tests (both Go and tree-sitter corpus) for the explicit form, a
+no-elements edge case, and confirming the implicit (no control numbers)
+form is unaffected. Full suite + e2e harness still green.

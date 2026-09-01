@@ -33,6 +33,16 @@
     "type": "segment",
     "named": true,
     "fields": {
+      "control_number": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": "data",
+            "named": true
+          }
+        ]
+      },
       "element": {
         "multiple": true,
         "required": false,

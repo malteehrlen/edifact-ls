@@ -209,3 +209,21 @@ UNZ+1+1'
       (component
         (data)))
     (terminator)))
+
+================================================================================
+segment tag with explicit repeat-representation control numbers
+================================================================================
+
+GDS:1:2+data'
+
+---
+
+(source_file
+  (segment
+    (segment_tag)
+    (data)
+    (data)
+    (element
+      (component
+        (data)))
+    (terminator)))

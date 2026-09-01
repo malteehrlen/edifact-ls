@@ -71,6 +71,8 @@ func parseSegment(lx *lexer) (*Segment, bool) {
 		return seg, !lx.eof()
 	}
 
+	consumeTagControlNumbers(lx, seg)
+
 	endTok := parseSegmentBody(lx, seg)
 	if endTok.Kind == tokenEOF {
 		lx.errs.Add(endTok.Pos, SeverityError, "unexpected end of input: segment %q is missing its terminator", seg.Tag)
@@ -79,6 +81,37 @@ func parseSegment(lx *lexer) (*Segment, bool) {
 	}
 	seg.EndPos = lx.position()
 	return seg, !lx.eof()
+}
+
+// consumeTagControlNumbers consumes the segment tag's optional
+// component-separator-delimited control-number components (explicit
+// representation of repeating segments, e.g. the "1" and "2" in
+// "GDS:1:2+..."), appending each to seg.TagControlNumbers. It stops at (and
+// rewinds past) the first token that doesn't fit that pattern -- a
+// tokenElementSep, tokenSegmentTerminator/EOF, or a componentSep not
+// followed by data -- leaving the lexer positioned for parseSegmentBody to
+// take over from there, so an ordinary segment with no control numbers
+// (the common case) is completely unaffected.
+func consumeTagControlNumbers(lx *lexer, seg *Segment) {
+	for {
+		pos, line, col, errLen := lx.pos, lx.line, lx.col, len(*lx.errs)
+
+		sepTok := lx.next()
+		if sepTok.Kind != tokenComponentSep {
+			lx.pos, lx.line, lx.col = pos, line, col
+			*lx.errs = (*lx.errs)[:errLen]
+			return
+		}
+
+		numTok := lx.next()
+		if numTok.Kind != tokenData {
+			lx.pos, lx.line, lx.col = pos, line, col
+			*lx.errs = (*lx.errs)[:errLen]
+			return
+		}
+
+		seg.TagControlNumbers = append(seg.TagControlNumbers, numTok.Raw)
+	}
 }
 
 // parseSegmentBody consumes elements/components until a segment terminator

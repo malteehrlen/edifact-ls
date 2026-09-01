@@ -57,6 +57,14 @@ type Segment struct {
 	Tag    string
 	TagPos Position
 
+	// TagControlNumbers holds the segment tag's optional, component-
+	// separator-delimited control-number components (e.g. the "1" in
+	// "GDS:1+..."), used for "explicit representation" of repeating
+	// segments -- rare in modern usage (current UNSMs use "implicit"
+	// representation, i.e. no control numbers), but part of the formal
+	// syntax. Empty when absent, which is the common case.
+	TagControlNumbers []string
+
 	Elements []Element
 
 	Pos    Position // position of the segment's first byte (the tag)
