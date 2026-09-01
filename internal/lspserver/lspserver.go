@@ -13,8 +13,10 @@ import (
 // Name is the server name reported to clients during initialize.
 const Name = "edifact-ls"
 
-// Version is the server version reported to clients during initialize.
-var Version = "0.0.1"
+// Version is the server version reported to clients during initialize. Set
+// at build time via -ldflags "-X .../internal/lspserver.Version=vX.Y.Z"
+// (see Makefile); "dev" when built without that flag.
+var Version = "dev"
 
 // Server is the edifact-ls language server.
 type Server struct {

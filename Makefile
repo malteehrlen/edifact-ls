@@ -1,9 +1,11 @@
-BIN := dist/edifact-ls
-GO  := go
+BIN     := dist/edifact-ls
+GO      := go
+VERSION ?= dev
+LDFLAGS := -X github.com/malteehrlen/edifact-ls/internal/lspserver.Version=$(VERSION)
 
 .PHONY: build
 build:
-	$(GO) build -o $(BIN) ./cmd/edifact-ls
+	$(GO) build -ldflags "$(LDFLAGS)" -o $(BIN) ./cmd/edifact-ls
 
 .PHONY: test
 test:
@@ -16,7 +18,7 @@ test-e2e: build
 
 .PHONY: install
 install:
-	$(GO) install ./cmd/edifact-ls
+	$(GO) install -ldflags "$(LDFLAGS)" ./cmd/edifact-ls
 
 .PHONY: clean
 clean:
