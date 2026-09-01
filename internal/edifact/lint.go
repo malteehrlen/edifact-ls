@@ -1,6 +1,9 @@
 package edifact
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 // knownServiceSegmentTags are the syntax-level service segments this
 // package recognizes. Per section 6.2 of
@@ -36,9 +39,40 @@ func Lint(ic *Interchange) ErrorList {
 		}
 	}
 
-	if ic.UNA != nil && ic.Delimiters == DefaultDelimiters() {
-		errs.Add(ic.UNA.Pos, SeverityInfo, "UNA service string advice defines exactly the default delimiters; it can be safely omitted")
+	if ic.UNA != nil && hasFunctionalDefaultDelimiters(ic.Delimiters) {
+		errs.Add(ic.UNA.Pos, SeverityInfo, "UNA service string advice defines exactly the default component/element/release/terminator delimiters%s; it can be safely omitted", decimalMarkNote(ic.Delimiters.Decimal))
 	}
 
 	return errs
+}
+
+// hasFunctionalDefaultDelimiters reports whether d matches the documented
+// defaults on the four delimiters this parser actually treats as
+// structurally significant (component, element, release, terminator).
+// The decimal mark and reserved character are deliberately excluded: this
+// parser never uses either to affect parsing, and per Wikipedia's EDIFACT
+// article, ISO 9735 itself has been inconsistent about the decimal mark
+// (versions 1-3 default to a comma; version 4 states the position is to be
+// ignored entirely, with comma and dot usable interchangeably in numeric
+// data) -- so treating it as part of "the" default would be asserting a
+// precision the standard doesn't actually have.
+func hasFunctionalDefaultDelimiters(d Delimiters) bool {
+	def := DefaultDelimiters()
+	return d.Component == def.Component &&
+		d.Element == def.Element &&
+		d.Release == def.Release &&
+		d.Terminator == def.Terminator
+}
+
+// decimalMarkNote describes a UNA's decimal mark character in terms of
+// which ISO 9735 convention it matches, per the version history above.
+func decimalMarkNote(decimal byte) string {
+	switch decimal {
+	case ',':
+		return " (using a comma decimal mark, the ISO 9735 version 1-3 default)"
+	case '.':
+		return " (using a dot decimal mark, the common convention since version 4, which says the decimal mark position is not significant)"
+	default:
+		return fmt.Sprintf(" (using %q as the decimal mark, itself not structurally significant per ISO 9735 version 4)", string(rune(decimal)))
+	}
 }

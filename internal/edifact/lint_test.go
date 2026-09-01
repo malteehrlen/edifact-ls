@@ -46,7 +46,8 @@ func TestLintDoesNotWarnOnRecognizedServiceSegments(t *testing.T) {
 	}
 }
 
-func TestLintInfoOnRedundantDefaultUNA(t *testing.T) {
+func TestLintInfoOnRedundantUNAWithDotDecimal(t *testing.T) {
+	// Dot decimal mark: the common convention since ISO 9735 version 4.
 	src := "UNA:+.? 'UNB+UNOA:1+S+R+201001:1200+1'UNH+1+ORDERS:D:96A:UN'BGM+220'UNT+3+1'UNZ+1+1'"
 	errs := lint(t, src)
 	if len(errs) != 1 {
@@ -55,8 +56,41 @@ func TestLintInfoOnRedundantDefaultUNA(t *testing.T) {
 	if errs[0].Severity != SeverityInfo {
 		t.Errorf("severity = %v, want info", errs[0].Severity)
 	}
-	if !containsMessage(errs, "default delimiters") {
-		t.Errorf("message = %q, want it to mention default delimiters", errs[0].Message)
+	if !containsMessage(errs, "safely omitted") || !containsMessage(errs, "version 4") {
+		t.Errorf("message = %q, want it to mention it's safe to omit and cite version 4", errs[0].Message)
+	}
+}
+
+func TestLintInfoOnRedundantUNAWithCommaDecimal(t *testing.T) {
+	// Comma decimal mark: the ISO 9735 version 1-3 default. Component,
+	// element, release, and terminator are still the (only structurally
+	// significant) defaults, so this should still be flagged as redundant
+	// -- just described as the version 1-3 convention, not version 4's.
+	src := "UNA:+,? 'UNB+UNOA:1+S+R+201001:1200+1'UNH+1+ORDERS:D:96A:UN'BGM+220'UNT+3+1'UNZ+1+1'"
+	errs := lint(t, src)
+	if len(errs) != 1 {
+		t.Fatalf("got %d lint diagnostics, want 1: %v", len(errs), errs)
+	}
+	if errs[0].Severity != SeverityInfo {
+		t.Errorf("severity = %v, want info", errs[0].Severity)
+	}
+	if !containsMessage(errs, "safely omitted") || !containsMessage(errs, "version 1-3") {
+		t.Errorf("message = %q, want it to mention it's safe to omit and cite version 1-3", errs[0].Message)
+	}
+}
+
+func TestLintInfoOnRedundantUNAWithUnusualDecimal(t *testing.T) {
+	// An unusual decimal mark doesn't stop this from being functionally
+	// redundant (component/element/release/terminator are still default);
+	// the message should just describe it factually rather than claiming
+	// it matches either named convention.
+	src := "UNA:+#? 'UNB+UNOA:1+S+R+201001:1200+1'UNH+1+ORDERS:D:96A:UN'BGM+220'UNT+3+1'UNZ+1+1'"
+	errs := lint(t, src)
+	if len(errs) != 1 {
+		t.Fatalf("got %d lint diagnostics, want 1: %v", len(errs), errs)
+	}
+	if !containsMessage(errs, `"#"`) {
+		t.Errorf("message = %q, want it to mention the actual decimal mark used", errs[0].Message)
 	}
 }
 
