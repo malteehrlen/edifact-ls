@@ -143,7 +143,7 @@ local function check_minify()
 
   local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
   local want = "UNB+UNOA:1+SENDER:ZZ+RECEIVER:ZZ+201001:1200+1'" ..
-    "UNH+1+ORDERS:D:96A:UN'BGM+220+ORDER123+9'DTM+137:20100101:102'UNT+4+1'UNZ+1+1'"
+    "UNH+1+TESTMSG:D:96A:UN'BGM+220+ORDER123+9'DTM+137:20100101:102'UNT+4+1'UNZ+1+1'"
   if #lines ~= 1 or lines[1] ~= want then
     fail("EdifactMinify on " .. fixture .. " produced " .. vim.inspect(lines) .. ", want a single line " .. vim.inspect(want))
     return
@@ -232,6 +232,12 @@ check_diagnostic("testdata/desadv-violation.edi", "maximum of 5", vim.diagnostic
 check_diagnostic("testdata/iftsta-violation.edi", "maximum of 1", vim.diagnostic.severity.ERROR)
 check_diagnostic("testdata/invrpt-violation.edi", "maximum of 1", vim.diagnostic.severity.ERROR)
 check_diagnostic("testdata/delfor-violation.edi", "maximum of 1", vim.diagnostic.severity.ERROR)
+check_diagnostic("testdata/orders-violation.edi", "maximum of 1", vim.diagnostic.severity.ERROR)
+check_diagnostic("testdata/ordrsp-violation.edi", "maximum of 1", vim.diagnostic.severity.ERROR)
+check_diagnostic("testdata/invoic-violation.edi", "maximum of 1", vim.diagnostic.severity.ERROR)
+check_diagnostic("testdata/iftmin-violation.edi", "maximum of 1", vim.diagnostic.severity.ERROR)
+check_diagnostic("testdata/pricat-violation.edi", "maximum of 1", vim.diagnostic.severity.ERROR)
+check_diagnostic("testdata/aperak-violation.edi", "maximum of 1", vim.diagnostic.severity.ERROR)
 check_hover("testdata/minimal.edi", 0, 1, "Interchange header")
 check_hover("testdata/minimal.edi", 2, 1, "Beginning of message")
 check_formatting()

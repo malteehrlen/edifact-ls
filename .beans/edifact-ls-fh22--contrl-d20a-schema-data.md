@@ -23,6 +23,23 @@ hand-typing it).
 
 Source: https://service.unece.org/trade/untdid/d20a/trmd/cntrl_c.htm
 
+# Blocked -- source not locatable
+
+Unlike every other message in this batch, CONTRL's page couldn't be
+sourced: it 403s directly via Cloudflare (same as all the others) but
+-- unlike all the others -- isn't archived by the Wayback Machine
+under this path, or any plausible variant checked:
+cntrl_c.htm/contrl_c.htm under both trmd/ and a guessed trsmd/, in
+d20a and every other release the CDX index has entries for (d21a,
+d99b, d96a, d01b, d03a, d95b). A broad CDX search across all of
+d20a/trmd/* and a scan for "contrl"/"cntrl" anywhere under
+trade/untdid/* also turned up nothing. CONTRL is a service/control
+message (syntax acknowledgment), not an ordinary trade message, so it
+plausibly lives at a different path on the real site than the trmd/
+one the direct link uses -- but I couldn't find it. Needs either a
+working link/mirror from the user, or a different sourcing approach,
+before this can be picked up.
+
 # Acceptance Criteria
 
 [ ] CONTRL's real branching diagram transcribed accurately (position,

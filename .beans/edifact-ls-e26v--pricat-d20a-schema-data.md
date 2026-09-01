@@ -1,11 +1,11 @@
 ---
 # edifact-ls-e26v
 title: PRICAT D.20A schema data
-status: todo
+status: completed
 type: feature
 priority: normal
 created_at: 2026-09-01T20:13:55Z
-updated_at: 2026-09-01T20:13:55Z
+updated_at: 2026-09-01T20:42:53Z
 parent: edifact-ls-oton
 ---
 
@@ -25,16 +25,29 @@ Source: https://service.unece.org/trade/untdid/d20a/trmd/pricat_c.htm
 
 # Acceptance Criteria
 
-[ ] PRICAT's real branching diagram transcribed accurately (position,
+[x] PRICAT's real branching diagram transcribed accurately (position,
 tag, mandatory/conditional, max repeat, nesting) from the cited
 source, verified to balance before transcription
-[ ] Registered for the exact tuple (PRICAT, D, 20A, UN)
-[ ] Unit tests: a conformant PRICAT message passes with no structural
+[x] Registered for the exact tuple (PRICAT, D, 20A, UN)
+[x] Unit tests: a conformant PRICAT message passes with no structural
 violations; at least one fixture produces a real violation the
 actual fetched structure supports (don't assume which kind --
 IFTMCS and BGM/CTA both turned out to have no mandatory
 groups/elements at some levels)
-[ ] e2e check: opening a fixture with a structural PRICAT violation
+[x] e2e check: opening a fixture with a structural PRICAT violation
 shows the diagnostic in nvim
-[ ] Source URL(s) cited in the schema data's source comment, including
+[x] Source URL(s) cited in the schema data's source comment, including
 the Cloudflare/Wayback caveat
+
+## Summary of Changes
+
+internal/edifact/pricat_d20a.go: 60 segment groups (max nesting depth
+5). Two mandatory top-level segments: BGM and DTM.
+
+internal/edifact/pricat_d20a_test.go: registered, minimal conformant
+pass, missing mandatory DTM, and BGM exceeding its own cap of 1.
+
+testdata/pricat-violation.edi + scripts/e2e_check.lua: e2e check (BGM
+repeated twice) confirms the diagnostic reaches a real nvim session.
+
+Full suite (`make test`) and e2e harness (`make test-e2e`) green.

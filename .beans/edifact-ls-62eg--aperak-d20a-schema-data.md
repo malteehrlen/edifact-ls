@@ -1,11 +1,11 @@
 ---
 # edifact-ls-62eg
 title: APERAK D.20A schema data
-status: todo
+status: completed
 type: feature
 priority: normal
 created_at: 2026-09-01T20:13:55Z
-updated_at: 2026-09-01T20:13:55Z
+updated_at: 2026-09-01T20:42:53Z
 parent: edifact-ls-oton
 ---
 
@@ -25,16 +25,31 @@ Source: https://service.unece.org/trade/untdid/d20a/trmd/aperak_c.htm
 
 # Acceptance Criteria
 
-[ ] APERAK's real branching diagram transcribed accurately (position,
+[x] APERAK's real branching diagram transcribed accurately (position,
 tag, mandatory/conditional, max repeat, nesting) from the cited
 source, verified to balance before transcription
-[ ] Registered for the exact tuple (APERAK, D, 20A, UN)
-[ ] Unit tests: a conformant APERAK message passes with no structural
+[x] Registered for the exact tuple (APERAK, D, 20A, UN)
+[x] Unit tests: a conformant APERAK message passes with no structural
 violations; at least one fixture produces a real violation the
 actual fetched structure supports (don't assume which kind --
 IFTMCS and BGM/CTA both turned out to have no mandatory
 groups/elements at some levels)
-[ ] e2e check: opening a fixture with a structural APERAK violation
+[x] e2e check: opening a fixture with a structural APERAK violation
 shows the diagnostic in nvim
-[ ] Source URL(s) cited in the schema data's source comment, including
+[x] Source URL(s) cited in the schema data's source comment, including
 the Cloudflare/Wayback caveat
+
+## Summary of Changes
+
+internal/edifact/aperak_d20a.go: the smallest message type in this
+whole project so far -- 5 segment groups, max nesting depth 2. Only
+BGM is mandatory at the top level, and its SG4 (leading with ERC,
+"Application error information") matches APERAK's real purpose.
+
+internal/edifact/aperak_d20a_test.go: registered, minimal conformant
+pass, missing mandatory BGM, and BGM exceeding its own cap of 1.
+
+testdata/aperak-violation.edi + scripts/e2e_check.lua: e2e check (BGM
+repeated twice) confirms the diagnostic reaches a real nvim session.
+
+Full suite (`make test`) and e2e harness (`make test-e2e`) green.

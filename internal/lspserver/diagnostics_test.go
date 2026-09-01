@@ -47,7 +47,7 @@ func TestDiagnosticsForTextSyntaxError(t *testing.T) {
 	// A complete, otherwise-valid envelope with one malformed segment, so
 	// envelope validation doesn't also fire (that's covered separately by
 	// TestDiagnosticsForTextEnvelopeError) and this isolates the syntax error.
-	src := "UNB+UNOA:1+S+R+201001:1200+1'UNH+1+ORDERS:D:96A:UN'1BC+garbage'UNT+3+1'UNZ+1+1'"
+	src := "UNB+UNOA:1+S+R+201001:1200+1'UNH+1+TESTMSG:D:96A:UN'1BC+garbage'UNT+3+1'UNZ+1+1'"
 	diags := diagnosticsForText(src)
 	if len(diags) != 1 {
 		t.Fatalf("got %d diagnostics, want 1: %+v", len(diags), diags)
@@ -67,7 +67,7 @@ func TestDiagnosticsForTextSyntaxError(t *testing.T) {
 func TestDiagnosticsForTextWarningSeverity(t *testing.T) {
 	// UNX isn't a recognized service segment but starts with the reserved
 	// "UN" prefix -- a lint warning, not a structural error.
-	src := "UNB+UNOA:1+S+R+201001:1200+1'UNH+1+ORDERS:D:96A:UN'UNX+1'UNT+3+1'UNZ+1+1'"
+	src := "UNB+UNOA:1+S+R+201001:1200+1'UNH+1+TESTMSG:D:96A:UN'UNX+1'UNT+3+1'UNZ+1+1'"
 	diags := diagnosticsForText(src)
 	if len(diags) != 1 {
 		t.Fatalf("got %d diagnostics, want 1: %+v", len(diags), diags)
@@ -82,7 +82,7 @@ func TestDiagnosticsForTextWarningSeverity(t *testing.T) {
 
 func TestDiagnosticsForTextInfoSeverity(t *testing.T) {
 	// A UNA that defines exactly the default delimiters is redundant.
-	src := "UNA:+.? 'UNB+UNOA:1+S+R+201001:1200+1'UNH+1+ORDERS:D:96A:UN'BGM+220'UNT+3+1'UNZ+1+1'"
+	src := "UNA:+.? 'UNB+UNOA:1+S+R+201001:1200+1'UNH+1+TESTMSG:D:96A:UN'BGM+220'UNT+3+1'UNZ+1+1'"
 	diags := diagnosticsForText(src)
 	if len(diags) != 1 {
 		t.Fatalf("got %d diagnostics, want 1: %+v", len(diags), diags)
@@ -93,7 +93,7 @@ func TestDiagnosticsForTextInfoSeverity(t *testing.T) {
 }
 
 func TestDiagnosticsForTextEnvelopeError(t *testing.T) {
-	src := "UNB+UNOA:1+S+R+201001:1200+1'UNH+1+ORDERS:D:96A:UN'BGM+220'UNT+3+1'"
+	src := "UNB+UNOA:1+S+R+201001:1200+1'UNH+1+TESTMSG:D:96A:UN'BGM+220'UNT+3+1'"
 	diags := diagnosticsForText(src)
 	if len(diags) != 1 {
 		t.Fatalf("got %d diagnostics, want 1: %+v", len(diags), diags)
@@ -180,7 +180,7 @@ func TestDiagnosticsPublishedOnOpenAndChange(t *testing.T) {
 	}
 
 	const uri = "file:///test.edi"
-	const badText = "UNB+UNOA:1+S+R+201001:1200+1'UNH+1+ORDERS:D:96A:UN'1BC+garbage'UNT+3+1'UNZ+1+1'"
+	const badText = "UNB+UNOA:1+S+R+201001:1200+1'UNH+1+TESTMSG:D:96A:UN'1BC+garbage'UNT+3+1'UNZ+1+1'"
 
 	if err := client.Notify(ctx, "textDocument/didOpen", protocol.DidOpenTextDocumentParams{
 		TextDocument: protocol.TextDocumentItem{URI: uri, LanguageID: "edifact", Version: 1, Text: badText},
@@ -201,7 +201,7 @@ func TestDiagnosticsPublishedOnOpenAndChange(t *testing.T) {
 
 	// Now "fix" the document via didChange (full-sync) and expect the
 	// diagnostics to be replaced with an empty set, not appended to.
-	const fixedText = "UNB+UNOA:1+S+R+201001:1200+1'UNH+1+ORDERS:D:96A:UN'UNT+2+1'UNZ+1+1'"
+	const fixedText = "UNB+UNOA:1+S+R+201001:1200+1'UNH+1+TESTMSG:D:96A:UN'UNT+2+1'UNZ+1+1'"
 	if err := client.Notify(ctx, "textDocument/didChange", protocol.DidChangeTextDocumentParams{
 		TextDocument: protocol.VersionedTextDocumentIdentifier{
 			TextDocumentIdentifier: protocol.TextDocumentIdentifier{URI: uri},
