@@ -36,19 +36,25 @@ func DefaultDelimiters() Delimiters {
 	}
 }
 
-// Severity classifies a diagnostic produced while parsing or validating.
+// Severity classifies a diagnostic produced while parsing, validating, or
+// linting.
 type Severity int
 
 const (
 	SeverityError Severity = iota
 	SeverityWarning
+	SeverityInfo
 )
 
 func (s Severity) String() string {
-	if s == SeverityWarning {
+	switch s {
+	case SeverityWarning:
 		return "warning"
+	case SeverityInfo:
+		return "info"
+	default:
+		return "error"
 	}
-	return "error"
 }
 
 // Error is a structured, positioned problem found while lexing, parsing, or

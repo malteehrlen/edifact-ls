@@ -1,11 +1,11 @@
 ---
 # edifact-ls-6uvf
 title: Info and warning severity diagnostics
-status: todo
+status: completed
 type: feature
 priority: normal
 created_at: 2026-09-01T16:13:54Z
-updated_at: 2026-09-01T16:13:54Z
+updated_at: 2026-09-01T16:21:07Z
 parent: edifact-ls-0d7g
 blocked_by:
     - edifact-ls-zc0r
@@ -32,13 +32,29 @@ present but defining exactly the documented default delimiters (section
 8.3.2) is valid but redundant -- worth a soft note, not a warning.
 
 # Acceptance Criteria
-- [ ] `edifact.SeverityInfo` added alongside the existing Error/Warning
-- [ ] `internal/lspserver`'s diagnostic-severity mapping covers all three
+- [x] `edifact.SeverityInfo` added alongside the existing Error/Warning
+- [x] `internal/lspserver`'s diagnostic-severity mapping covers all three
       (maps to LSP's Error/Warning/Information)
-- [ ] Warning: a segment tag starting with "UN" that isn't a recognized
+- [x] Warning: a segment tag starting with "UN" that isn't a recognized
       service segment tag
-- [ ] Info: a `UNA` present whose 6 delimiter characters exactly match
+- [x] Info: a `UNA` present whose 6 delimiter characters exactly match
       `DefaultDelimiters()` (redundant, safe to omit)
-- [ ] Unit tests for both new checks, plus an e2e check confirming a
+- [x] Unit tests for both new checks, plus an e2e check confirming a
       warning/info-level diagnostic actually renders with the right
       severity in nvim (not just error-level, which is already covered)
+
+## Summary of Changes
+`edifact.SeverityInfo` added; `internal/lspserver`'s severity mapping now
+covers Error/Warning/Information. New `internal/edifact/lint.go`
+(`Lint(*Interchange) ErrorList`, separate from `ValidateEnvelopes` since
+these are advisory, not structural correctness checks): a warning for a
+well-formed segment tag starting with "UN" that isn't one of the
+recognized service segments, and an info note for a `UNA` that defines
+exactly the default delimiters (redundant). Wired into
+`diagnosticsForText` alongside the existing parse/envelope errors.
+
+Two new fixtures (`testdata/lint-warning.edi`, `testdata/lint-info.edi`)
+and `check_diagnostic` in the e2e harness gained an optional expected-
+severity parameter, now exercised for all four severity/fixture
+combinations (error x2, warning, info) through the real headless-nvim
+pipeline -- not just asserted at the Go unit-test level.

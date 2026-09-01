@@ -34,8 +34,10 @@ local function check_lsp_attaches()
 end
 
 -- Check: opening a fixture with a known problem surfaces a diagnostic whose
--- message contains the given substring.
-local function check_diagnostic(fixture, expect_substring)
+-- message contains the given substring. If expect_severity is given (one of
+-- vim.diagnostic.severity.*), the matching diagnostic must also have that
+-- exact severity.
+local function check_diagnostic(fixture, expect_substring, expect_severity)
   local path = vim.fn.fnamemodify(fixture, ":p")
   vim.cmd.edit({ path, bang = true })
 
@@ -52,7 +54,14 @@ local function check_diagnostic(fixture, expect_substring)
 
   for _, d in ipairs(diags) do
     if d.message:find(expect_substring, 1, true) then
-      pass("diagnostics for " .. path .. " include a message containing " .. vim.inspect(expect_substring))
+      if expect_severity and d.severity ~= expect_severity then
+        fail("diagnostic for " .. path .. " matching " .. vim.inspect(expect_substring) ..
+          " has severity " .. vim.diagnostic.severity[d.severity] ..
+          ", want " .. vim.diagnostic.severity[expect_severity])
+        return
+      end
+      pass("diagnostics for " .. path .. " include a message containing " .. vim.inspect(expect_substring) ..
+        (expect_severity and (" with severity " .. vim.diagnostic.severity[expect_severity]) or ""))
       return
     end
   end
@@ -172,8 +181,10 @@ local function check_treesitter()
 end
 
 check_lsp_attaches()
-check_diagnostic("testdata/syntax-error.edi", "invalid segment tag")
-check_diagnostic("testdata/envelope-error.edi", "missing UNZ")
+check_diagnostic("testdata/syntax-error.edi", "invalid segment tag", vim.diagnostic.severity.ERROR)
+check_diagnostic("testdata/envelope-error.edi", "missing UNZ", vim.diagnostic.severity.ERROR)
+check_diagnostic("testdata/lint-warning.edi", "reserved", vim.diagnostic.severity.WARN)
+check_diagnostic("testdata/lint-info.edi", "default delimiters", vim.diagnostic.severity.INFO)
 check_formatting()
 check_minify()
 check_treesitter()

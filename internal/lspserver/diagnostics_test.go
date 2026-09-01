@@ -64,6 +64,34 @@ func TestDiagnosticsForTextSyntaxError(t *testing.T) {
 	}
 }
 
+func TestDiagnosticsForTextWarningSeverity(t *testing.T) {
+	// UNX isn't a recognized service segment but starts with the reserved
+	// "UN" prefix -- a lint warning, not a structural error.
+	src := "UNB+UNOA:1+S+R+201001:1200+1'UNH+1+ORDERS:D:96A:UN'UNX+1'UNT+3+1'UNZ+1+1'"
+	diags := diagnosticsForText(src)
+	if len(diags) != 1 {
+		t.Fatalf("got %d diagnostics, want 1: %+v", len(diags), diags)
+	}
+	if diags[0].Severity == nil || *diags[0].Severity != protocol.DiagnosticSeverityWarning {
+		t.Errorf("severity = %v, want DiagnosticSeverityWarning", diags[0].Severity)
+	}
+	if !strings.Contains(diags[0].Message, "reserved") {
+		t.Errorf("message = %q, want it to mention the reserved prefix", diags[0].Message)
+	}
+}
+
+func TestDiagnosticsForTextInfoSeverity(t *testing.T) {
+	// A UNA that defines exactly the default delimiters is redundant.
+	src := "UNA:+.? 'UNB+UNOA:1+S+R+201001:1200+1'UNH+1+ORDERS:D:96A:UN'BGM+220'UNT+3+1'UNZ+1+1'"
+	diags := diagnosticsForText(src)
+	if len(diags) != 1 {
+		t.Fatalf("got %d diagnostics, want 1: %+v", len(diags), diags)
+	}
+	if diags[0].Severity == nil || *diags[0].Severity != protocol.DiagnosticSeverityInformation {
+		t.Errorf("severity = %v, want DiagnosticSeverityInformation", diags[0].Severity)
+	}
+}
+
 func TestDiagnosticsForTextEnvelopeError(t *testing.T) {
 	src := "UNB+UNOA:1+S+R+201001:1200+1'UNH+1+ORDERS:D:96A:UN'BGM+220'UNT+3+1'"
 	diags := diagnosticsForText(src)
