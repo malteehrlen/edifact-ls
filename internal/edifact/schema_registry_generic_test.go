@@ -131,3 +131,38 @@ func TestAllRegisteredSchemasFlagExceededTopLevelRepeat(t *testing.T) {
 		})
 	}
 }
+
+// TestAllRegisteredSchemasGroupPathAtStaysInRange exercises GroupPathAt
+// (edifact-ls-pcm0's hover group-context lookup) against every
+// registered schema's own minimal-conformant message, at every index --
+// a broad smoke test against real, deeply-nested trees (unlike the
+// small hand-built ones GroupPathAt's own dedicated tests use), asserting
+// every reported group number is a real, in-range group of that schema.
+func TestAllRegisteredSchemasGroupPathAtStaysInRange(t *testing.T) {
+	for _, info := range ListRegisteredSchemas() {
+		id := info.ID
+		t.Run(fmt.Sprintf("%s_%s_%s_%s", id.Type, id.Version, id.Release, id.Agency), func(t *testing.T) {
+			rs := schemaRegistry[id]
+			segs := segsFromTags(minimalMandatoryTags(rs.Schema.Nodes))
+			totalGroups := countGroups(rs.Schema.Nodes)
+			for i := range segs {
+				for _, n := range GroupPathAt(rs.Schema, segs, i) {
+					if n < 1 || n > totalGroups {
+						t.Errorf("segment %d (%q): group number %d out of range [1,%d]", i, segs[i].Tag, n, totalGroups)
+					}
+				}
+			}
+		})
+	}
+}
+
+func countGroups(nodes []SchemaNode) int {
+	n := 0
+	for _, node := range nodes {
+		if node.Group != nil {
+			n++
+			n += countGroups(node.Group)
+		}
+	}
+	return n
+}

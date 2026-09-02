@@ -33,6 +33,20 @@ func messageIDOf(unh *Segment, d Delimiters) MessageID {
 	}
 }
 
+// MessageIDOf is the exported form of messageIDOf, for callers outside
+// this package that need to identify a message from its UNH -- e.g. the
+// hover handler, to look up the same Schema ValidateMessageSchemas would
+// use for a given segment occurrence (see edifact-ls-pcm0).
+func MessageIDOf(unh *Segment, d Delimiters) MessageID {
+	return messageIDOf(unh, d)
+}
+
+// LookupSchema returns the Schema registered for id, if any.
+func LookupSchema(id MessageID) (Schema, bool) {
+	rs, ok := schemaRegistry[id]
+	return rs.Schema, ok
+}
+
 // registeredSchema pairs a Schema with the source it was transcribed
 // from, so provenance travels as queryable data (for ListRegisteredSchemas
 // and everything built on it) instead of living only in a Go doc comment.

@@ -367,6 +367,11 @@ check_hover("testdata/minimal.edi", 2, 1, "Beginning of message")
 -- entirely (see internal/edifact/lexer.go's next()) -- if that regressed,
 -- this hover would simply never come back within its wait timeout.
 check_hover("testdata/embedded-newline.edi", 4, 1, "Name and address")
+-- edifact-ls-pcm0: tier-3 hover, message-specific segment-group context.
+-- TOD is the leading segment of IFTMCS's real segment group 2 and isn't
+-- in the tier-1 tag table, so this also exercises the "group context
+-- alone, no tier-1 description" fallback.
+check_hover("testdata/iftmcs-group-context.edi", 3, 1, "Part of segment group 2")
 -- edifact-ls-x3pb: quick-fix code actions for the two mechanically-fixable
 -- diagnostic kinds.
 -- want_lines asserts the whole UNA line is gone (not just emptied) --

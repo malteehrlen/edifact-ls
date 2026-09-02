@@ -262,3 +262,117 @@ func TestValidateSchemaGenuineOverflowStillDetectedNearSameTagSiblings(t *testin
 		t.Fatalf("got %v, want exactly one error about UNS exceeding its max repeat of 1", errs)
 	}
 }
+
+func intsEqual(a, b []int) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func TestGroupPathAtTopLevelSegmentHasNoPath(t *testing.T) {
+	schema := Schema{Nodes: []SchemaNode{
+		{Segment: "BGM", Mandatory: true, MaxRepeat: 1},
+	}}
+	segments := []Segment{seg("BGM", 1)}
+	if got := GroupPathAt(schema, segments, 0); got != nil {
+		t.Fatalf("GroupPathAt = %v, want nil for a top-level segment", got)
+	}
+}
+
+func TestGroupPathAtSingleGroup(t *testing.T) {
+	schema := Schema{Nodes: []SchemaNode{
+		{Segment: "BGM", Mandatory: true, MaxRepeat: 1},
+		{Group: []SchemaNode{
+			{Segment: "NAD", Mandatory: true, MaxRepeat: 1},
+			{Segment: "CTA", Mandatory: false, MaxRepeat: 1},
+		}, Mandatory: false, MaxRepeat: 1},
+	}}
+	segments := []Segment{seg("BGM", 1), seg("NAD", 2), seg("CTA", 3)}
+
+	if got := GroupPathAt(schema, segments, 0); got != nil {
+		t.Errorf("BGM: GroupPathAt = %v, want nil (top-level)", got)
+	}
+	if got := GroupPathAt(schema, segments, 1); !intsEqual(got, []int{1}) {
+		t.Errorf("NAD: GroupPathAt = %v, want [1] (segment group 1)", got)
+	}
+	if got := GroupPathAt(schema, segments, 2); !intsEqual(got, []int{1}) {
+		t.Errorf("CTA: GroupPathAt = %v, want [1]", got)
+	}
+}
+
+func TestGroupPathAtNestedGroups(t *testing.T) {
+	// Numbering must follow the same preorder sequence UN/EDIFACT itself
+	// uses (matching the "Segment group N" comments this project's real
+	// generated schema data already carries, e.g. iftmcs_d21a.go): group
+	// 1 first, then group 2 nested inside it, then group 3 as a sibling
+	// of group 1 -- not depth-first-complete-subtree-then-number.
+	schema := Schema{Nodes: []SchemaNode{
+		{Segment: "BGM", Mandatory: true, MaxRepeat: 1},
+		{Group: []SchemaNode{ // segment group 1
+			{Segment: "TOD", Mandatory: true, MaxRepeat: 1},
+			{Group: []SchemaNode{ // segment group 2, nested in 1
+				{Segment: "LOC", Mandatory: true, MaxRepeat: 1},
+			}, Mandatory: false, MaxRepeat: 1},
+		}, Mandatory: false, MaxRepeat: 1},
+		{Group: []SchemaNode{ // segment group 3, a sibling of group 1
+			{Segment: "NAD", Mandatory: true, MaxRepeat: 1},
+		}, Mandatory: false, MaxRepeat: 1},
+	}}
+	segments := []Segment{seg("BGM", 1), seg("TOD", 2), seg("LOC", 3), seg("NAD", 4)}
+
+	if got := GroupPathAt(schema, segments, 1); !intsEqual(got, []int{1}) {
+		t.Errorf("TOD: GroupPathAt = %v, want [1]", got)
+	}
+	if got := GroupPathAt(schema, segments, 2); !intsEqual(got, []int{1, 2}) {
+		t.Errorf("LOC: GroupPathAt = %v, want [1 2] (nested)", got)
+	}
+	if got := GroupPathAt(schema, segments, 3); !intsEqual(got, []int{3}) {
+		t.Errorf("NAD: GroupPathAt = %v, want [3], not renumbered by group 2's existence", got)
+	}
+}
+
+// TestGroupPathAtNumberingStableAcrossRepeats is a regression test for the
+// exact bug numberGroups's doc comment warns about: a nested group's
+// number must be the same for every occurrence of its repeating parent,
+// not incremented per occurrence.
+func TestGroupPathAtNumberingStableAcrossRepeats(t *testing.T) {
+	schema := Schema{Nodes: []SchemaNode{
+		{Group: []SchemaNode{ // segment group 1, repeats up to 3 times
+			{Segment: "NAD", Mandatory: true, MaxRepeat: 1},
+			{Group: []SchemaNode{ // segment group 2, nested in 1
+				{Segment: "CTA", Mandatory: true, MaxRepeat: 1},
+			}, Mandatory: false, MaxRepeat: 1},
+		}, Mandatory: false, MaxRepeat: 3},
+	}}
+	segments := []Segment{
+		seg("NAD", 1), seg("CTA", 2), // 1st occurrence of group 1
+		seg("NAD", 3), seg("CTA", 4), // 2nd occurrence
+		seg("NAD", 5), seg("CTA", 6), // 3rd occurrence
+	}
+
+	for i := 0; i < len(segments); i += 2 {
+		if got := GroupPathAt(schema, segments, i); !intsEqual(got, []int{1}) {
+			t.Errorf("NAD at index %d: GroupPathAt = %v, want [1] every time", i, got)
+		}
+		if got := GroupPathAt(schema, segments, i+1); !intsEqual(got, []int{1, 2}) {
+			t.Errorf("CTA at index %d: GroupPathAt = %v, want [1 2] every time, not renumbered per repeat", i+1, got)
+		}
+	}
+}
+
+func TestGroupPathAtOutOfRangeIndex(t *testing.T) {
+	schema := Schema{Nodes: []SchemaNode{{Segment: "BGM", Mandatory: true, MaxRepeat: 1}}}
+	segments := []Segment{seg("BGM", 1)}
+	if got := GroupPathAt(schema, segments, -1); got != nil {
+		t.Errorf("negative index: GroupPathAt = %v, want nil", got)
+	}
+	if got := GroupPathAt(schema, segments, 5); got != nil {
+		t.Errorf("out-of-range index: GroupPathAt = %v, want nil", got)
+	}
+}
