@@ -12,6 +12,7 @@ naming what IS registered, not silence and not a false match.
 
 | Type | Version | Release | Agency | Source |
 | --- | --- | --- | --- | --- |
+| APERAK | D | 00B | UN | https://service.unece.org/trade/untdid/d00b/trmd/aperak_c.htm |
 | APERAK | D | 20A | UN | https://service.unece.org/trade/untdid/d20a/trmd/aperak_c.htm |
 | AUTHOR | D | 20A | UN | https://service.unece.org/trade/untdid/d20a/trmd/author_c.htm |
 | BALANC | D | 20A | UN | https://service.unece.org/trade/untdid/d20a/trmd/balanc_c.htm |

@@ -345,6 +345,7 @@ check_diagnostic("testdata/invoic-violation.edi", "maximum of 1", vim.diagnostic
 check_diagnostic("testdata/iftmin-violation.edi", "maximum of 1", vim.diagnostic.severity.ERROR)
 check_diagnostic("testdata/pricat-violation.edi", "maximum of 1", vim.diagnostic.severity.ERROR)
 check_diagnostic("testdata/aperak-violation.edi", "maximum of 1", vim.diagnostic.severity.ERROR)
+check_diagnostic("testdata/aperak-d00b-violation.edi", "maximum of 1", vim.diagnostic.severity.ERROR)
 check_diagnostic("testdata/cuscar-violation.edi", "maximum of 1", vim.diagnostic.severity.ERROR)
 check_diagnostic("testdata/orders-d99b-violation.edi", "maximum of 1", vim.diagnostic.severity.ERROR)
 check_diagnostic("testdata/ordrsp-d99b-violation.edi", "maximum of 1", vim.diagnostic.severity.ERROR)
