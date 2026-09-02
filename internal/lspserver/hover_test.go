@@ -157,6 +157,66 @@ func TestTextDocumentHoverNoGroupContextForUnregisteredMessageType(t *testing.T)
 	}
 }
 
+func TestTextDocumentHoverCodedValueBGMMessageFunction(t *testing.T) {
+	// Element 2 ("Message function code") -- coded per real UN/EDIFACT
+	// code list 1225, registered in codelist_1225.go. "9" = "Original".
+	text := "BGM+380+1234+9'"
+	hover := hoverAt(t, text, 0, 13) // the "9"
+	if hover == nil {
+		t.Fatal("got nil hover, want coded-value content for BGM's message function code")
+	}
+	content := hover.Contents.(protocol.MarkupContent)
+	if !strings.Contains(content.Value, "Original") {
+		t.Errorf("Value = %q, want it to name the real code 9 = Original", content.Value)
+	}
+}
+
+func TestTextDocumentHoverCodedValueCTAContactFunction(t *testing.T) {
+	// Element 0 ("Contact function code") -- coded per real UN/EDIFACT
+	// code list 3139, registered in codelist_3139.go.
+	text := "CTA+AA'"
+	hover := hoverAt(t, text, 0, 4) // the "AA"
+	if hover == nil {
+		t.Fatal("got nil hover, want coded-value content for CTA's contact function code")
+	}
+	content := hover.Contents.(protocol.MarkupContent)
+	if !strings.Contains(content.Value, "Insurance contact") {
+		t.Errorf("Value = %q, want it to name the real code AA = Insurance contact", content.Value)
+	}
+}
+
+func TestTextDocumentHoverUnrecognizedCodeFallsBackToTierOne(t *testing.T) {
+	// "999" isn't a real message function code -- hover must not assert
+	// a false meaning for it, but should still fall back to BGM's
+	// ordinary tier-1 tag description rather than nothing at all.
+	text := "BGM+380+1234+999'"
+	hover := hoverAt(t, text, 0, 13) // the "999"
+	if hover == nil {
+		t.Fatal("got nil hover, want the tier-1 BGM fallback for an unrecognized code")
+	}
+	content := hover.Contents.(protocol.MarkupContent)
+	if !strings.Contains(content.Value, "Beginning of message") {
+		t.Errorf("Value = %q, want the tier-1 BGM description, not a fabricated coded-value meaning", content.Value)
+	}
+}
+
+func TestTextDocumentHoverNonCodedComponentFallsBackToTierOne(t *testing.T) {
+	// Element 0 component 0 ("Document name code") is a real BGM
+	// component, but its code list (1001, ~800 entries) was deliberately
+	// not sourced -- see segment_elements_data.go's scope note. Hovering
+	// it should fall back to tier 1, not claim a coded meaning that was
+	// never actually looked up.
+	text := "BGM+380'"
+	hover := hoverAt(t, text, 0, 5) // the "380"
+	if hover == nil {
+		t.Fatal("got nil hover, want the tier-1 BGM fallback")
+	}
+	content := hover.Contents.(protocol.MarkupContent)
+	if !strings.Contains(content.Value, "Beginning of message") {
+		t.Errorf("Value = %q, want the tier-1 BGM description", content.Value)
+	}
+}
+
 func TestTextDocumentHoverUnknownDocumentReturnsNil(t *testing.T) {
 	st := &state{documents: map[protocol.DocumentUri]string{}}
 	hover, err := st.textDocumentHover(nil, &protocol.HoverParams{

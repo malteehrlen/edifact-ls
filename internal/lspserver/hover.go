@@ -12,11 +12,18 @@ import (
 
 // textDocumentHover looks up which segment (or the UNA service string
 // advice) the given position falls within, and combines whatever's
-// available for it: a tier-1 tag description (name + one-line
-// description, independent of message type) and/or tier-2 message
-// context (which segment group(s) this specific occurrence falls inside,
-// per its message's registered Schema -- see edifact-ls-pcm0). Returns
-// nil only when neither is available, not a placeholder.
+// available for it. Three tiers, checked most-specific first:
+//   - tier 2: hovering a specific coded value (e.g. "9" in BGM+9) whose
+//     component has a known code list -- see edifact-ls-6xaz. Takes
+//     priority over the tag-level tiers below when it applies, since
+//     it's strictly more specific to the exact position hovered.
+//   - tier 1: a tag description (name + one-line description,
+//     independent of message type)
+//   - tier 3: message context (which segment group(s) this occurrence
+//     falls inside, per its message's registered Schema) -- see
+//     edifact-ls-pcm0
+//
+// Returns nil only when nothing at all is available, not a placeholder.
 func (st *state) textDocumentHover(context *glsp.Context, params *protocol.HoverParams) (*protocol.Hover, error) {
 	st.docsMu.Lock()
 	text, ok := st.documents[params.TextDocument.URI]
@@ -27,6 +34,12 @@ func (st *state) textDocumentHover(context *glsp.Context, params *protocol.Hover
 
 	offset := lspPositionToOffset(text, params.Position)
 	ic, _ := edifact.Parse(text)
+
+	if content, ok := codedValueHoverAt(ic, offset); ok {
+		return &protocol.Hover{
+			Contents: protocol.MarkupContent{Kind: protocol.MarkupKindMarkdown, Value: content},
+		}, nil
+	}
 
 	tag, found := segmentTagAt(ic, offset)
 	if !found {
@@ -59,6 +72,49 @@ func (st *state) textDocumentHover(context *glsp.Context, params *protocol.Hover
 			Value: sb.String(),
 		},
 	}, nil
+}
+
+// codedValueHoverAt returns markdown content for the coded value under
+// offset, if the segment's element/component structure there is known
+// (see segment_elements_data.go) and the actual text present is a
+// recognized code in that component's registered code list (see
+// codelist.go). ok is false for anything short of that -- including a
+// component that's coded but whose actual value isn't a recognized code
+// -- so a wrong or unrecognized value never gets asserted a false
+// meaning; callers fall back to less specific hover content instead.
+func codedValueHoverAt(ic *edifact.Interchange, offset int) (string, bool) {
+	for _, seg := range ic.Segments {
+		if offset < seg.Pos.Offset || offset >= seg.EndPos.Offset {
+			continue
+		}
+		schema, ok := edifact.SegmentElementSchemaFor(seg.Tag)
+		if !ok {
+			return "", false
+		}
+		for ei, el := range seg.Elements {
+			if ei >= len(schema.Elements) {
+				break
+			}
+			es := schema.Elements[ei]
+			for ci, c := range el.Components {
+				start := c.Pos.Offset
+				if offset < start || offset >= start+len(c.Raw) {
+					continue
+				}
+				if ci >= len(es.Components) || es.Components[ci].CodeList == "" {
+					return "", false
+				}
+				value := c.Value(ic.Delimiters)
+				cv, ok := edifact.LookupCode(es.Components[ci].CodeList, value)
+				if !ok {
+					return "", false
+				}
+				return fmt.Sprintf("**%s** -- %s\n\n%s", value, cv.Name, cv.Description), true
+			}
+		}
+		return "", false
+	}
+	return "", false
 }
 
 // groupPathAt returns the sequence of segment-group numbers (outermost

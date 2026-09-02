@@ -18,6 +18,14 @@ package edifact
 // element/component -- confirmed deliberately, not assumed, since
 // edifact-ls-7uhx already found real UN/EDIFACT data has plenty of
 // "nothing here is actually mandatory" segments/groups.
+//
+// BGM's "Message function code" component and CTA's "Contact function
+// code" component are additionally marked CodeList: their actual real
+// UN/EDIFACT code lists (1225 and 3139) are registered in
+// codelist_1225.go/codelist_3139.go -- see edifact-ls-6xaz for hover's
+// coded-value tier and why only these two of BGM/CTA/DTM's several coded
+// components are wired up so far (1001, "Document name code", is a
+// ~800-entry list deliberately deferred, not attempted here).
 func init() {
 	RegisterSegmentElementSchema("BGM", SegmentElementSchema{Elements: []ElementSchema{
 		{Name: "Document/message name", Mandatory: false, Components: []ComponentSchema{
@@ -32,7 +40,7 @@ func init() {
 			{Name: "Revision identifier", Mandatory: false},
 		}},
 		{Name: "Message function code", Mandatory: false, Components: []ComponentSchema{
-			{Name: "Message function code", Mandatory: false},
+			{Name: "Message function code", Mandatory: false, CodeList: "1225"},
 		}},
 		{Name: "Response type code", Mandatory: false, Components: []ComponentSchema{
 			{Name: "Response type code", Mandatory: false},
@@ -55,7 +63,7 @@ func init() {
 
 	RegisterSegmentElementSchema("CTA", SegmentElementSchema{Elements: []ElementSchema{
 		{Name: "Contact function code", Mandatory: false, Components: []ComponentSchema{
-			{Name: "Contact function code", Mandatory: false},
+			{Name: "Contact function code", Mandatory: false, CodeList: "3139"},
 		}},
 		{Name: "Contact details", Mandatory: false, Components: []ComponentSchema{
 			{Name: "Contact identifier", Mandatory: false},

@@ -25,6 +25,15 @@ type ElementSchema struct {
 type ComponentSchema struct {
 	Name      string
 	Mandatory bool
+
+	// CodeList, if non-empty, is the UN Trade Data Element Directory
+	// data-element number of the code list this component's actual
+	// value is drawn from (e.g. "1225" for BGM's message function
+	// code) -- see codelist.go. Empty for a component whose value isn't
+	// coded, or one that is but whose code list hasn't been sourced yet
+	// (see edifact-ls-6xaz's scope note on this being registered
+	// incrementally, not exhaustively).
+	CodeList string
 }
 
 // ValidateSegmentElements checks seg's actual elements/components against
@@ -75,6 +84,15 @@ var segmentElementSchemas = map[string]SegmentElementSchema{}
 // only a new registration call.
 func RegisterSegmentElementSchema(tag string, schema SegmentElementSchema) {
 	segmentElementSchemas[tag] = schema
+}
+
+// SegmentElementSchemaFor returns the registered SegmentElementSchema for
+// tag, if any -- for callers outside this package that need a segment's
+// element/component structure directly, e.g. hover's coded-value lookup
+// (see edifact-ls-6xaz).
+func SegmentElementSchemaFor(tag string) (SegmentElementSchema, bool) {
+	schema, ok := segmentElementSchemas[tag]
+	return schema, ok
 }
 
 // ValidateSegmentContent checks every segment in ic against a registered

@@ -372,6 +372,10 @@ check_hover("testdata/embedded-newline.edi", 4, 1, "Name and address")
 -- in the tier-1 tag table, so this also exercises the "group context
 -- alone, no tier-1 description" fallback.
 check_hover("testdata/iftmcs-group-context.edi", 3, 1, "Part of segment group 2")
+-- edifact-ls-6xaz: tier-2 hover, coded-value meaning. "9" in BGM's
+-- message function code (element 3) is a real UN/EDIFACT code (list
+-- 1225) meaning "Original".
+check_hover("testdata/coded-value-hover.edi", 2, 13, "Original")
 -- edifact-ls-x3pb: quick-fix code actions for the two mechanically-fixable
 -- diagnostic kinds.
 -- want_lines asserts the whole UNA line is gone (not just emptied) --
