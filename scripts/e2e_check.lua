@@ -256,8 +256,10 @@ end
 -- a quickfix action whose title contains expect_title_substring; applying
 -- that action's edit (exactly as a real client would) is expected to
 -- resolve the problem, verified by re-checking diagnostics on the buffer
--- afterward.
-local function check_code_action(fixture, line, character, expect_title_substring)
+-- afterward. want_lines, if given, additionally asserts the exact
+-- resulting buffer content -- needed to catch a fix leaving behind
+-- unwanted artifacts (e.g. a blank line) that no diagnostic would flag.
+local function check_code_action(fixture, line, character, expect_title_substring, want_lines)
   local path = vim.fn.fnamemodify(fixture, ":p")
   vim.cmd.edit({ path, bang = true })
 
@@ -306,6 +308,22 @@ local function check_code_action(fixture, line, character, expect_title_substrin
     return
   end
 
+  if want_lines then
+    local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+    if #lines ~= #want_lines then
+      fail("after applying code action at " .. path .. ", buffer has " .. #lines ..
+        " lines, want " .. #want_lines .. ": " .. vim.inspect(lines))
+      return
+    end
+    for i, w in ipairs(want_lines) do
+      if lines[i] ~= w then
+        fail("after applying code action at " .. path .. ", line " .. i .. " = " ..
+          vim.inspect(lines[i]) .. ", want " .. vim.inspect(w))
+        return
+      end
+    end
+  end
+
   pass("codeAction at " .. path .. ":" .. line .. ":" .. character ..
     " (" .. expect_title_substring .. ") applies cleanly")
 end
@@ -351,7 +369,15 @@ check_hover("testdata/minimal.edi", 2, 1, "Beginning of message")
 check_hover("testdata/embedded-newline.edi", 4, 1, "Name and address")
 -- edifact-ls-x3pb: quick-fix code actions for the two mechanically-fixable
 -- diagnostic kinds.
-check_code_action("testdata/lint-info.edi", 0, 0, "Remove redundant UNA")
+-- want_lines asserts the whole UNA line is gone (not just emptied) --
+-- regression coverage for the trailing-newline fix in edifact-ls-x3pb.
+check_code_action("testdata/lint-info.edi", 0, 0, "Remove redundant UNA", {
+  "UNB+UNOA:1+SENDER:ZZ+RECEIVER:ZZ+201001:1200+1'",
+  "UNH+1+ORDERS:D:96A:UN'",
+  "BGM+220'",
+  "UNT+3+1'",
+  "UNZ+1+1'",
+})
 -- Cursor on the wrong value itself ("99" in "UNT+99"), not on the UNT tag --
 -- regression coverage for the range-matching fix in edifact-ls-x3pb (the
 -- action used to be reachable only from the tag's exact first byte).

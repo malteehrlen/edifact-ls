@@ -68,7 +68,7 @@ func (s Severity) String() string {
 func Validate(src string) (*Interchange, ErrorList) {
 	ic, errs := Parse(src)
 	errs = append(errs, ValidateEnvelopes(ic)...)
-	errs = append(errs, Lint(ic)...)
+	errs = append(errs, Lint(ic, src)...)
 	errs = append(errs, ValidateMessageSchemas(ic)...)
 	errs = append(errs, ValidateSegmentContent(ic)...)
 	return ic, errs

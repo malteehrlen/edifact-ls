@@ -25,8 +25,10 @@ var knownServiceSegmentTags = map[string]bool{
 // Lint runs advisory checks over an already-parsed Interchange, producing
 // warning/info-severity diagnostics for things that are syntactically
 // valid but questionable, as opposed to the structural correctness
-// ValidateEnvelopes checks.
-func Lint(ic *Interchange) ErrorList {
+// ValidateEnvelopes checks. src is the original interchange text; needed
+// (only) to let the redundant-UNA Fix consume a trailing line terminator
+// so removing it doesn't leave a blank line behind -- see trailingNewline.
+func Lint(ic *Interchange, src string) ErrorList {
 	var errs ErrorList
 
 	for _, seg := range ic.Segments {
@@ -40,15 +42,42 @@ func Lint(ic *Interchange) ErrorList {
 	}
 
 	if ic.UNA != nil && hasFunctionalDefaultDelimiters(ic.Delimiters) {
+		// UNA can only ever appear at the very start of src (detectUNA
+		// requires src[:3] == "UNA"), so there's never a preceding
+		// newline to worry about -- only a trailing one.
+		end := ic.UNA.Pos.Offset + len(ic.UNA.Raw)
+		oldText := ic.UNA.Raw + trailingNewline(src, end)
 		errs.AddFixable(ic.UNA.Pos, SeverityInfo, "redundant-una", &Fix{
 			Title:   "Remove redundant UNA service string advice",
 			Pos:     ic.UNA.Pos,
-			OldText: ic.UNA.Raw,
+			OldText: oldText,
 			NewText: "",
 		}, "UNA service string advice defines exactly the default component/element/release/terminator delimiters%s; it can be safely omitted", decimalMarkNote(ic.Delimiters.Decimal))
 	}
 
 	return errs
+}
+
+// trailingNewline returns the line terminator ("\r\n", "\n", or bare "\r")
+// immediately following byte offset end in src, or "" if there isn't one.
+// Real-world interchanges commonly put each segment on its own line purely
+// for readability (see lexer.go's skipInterSegmentWhitespace); a Fix that
+// deletes a whole such segment needs to consume that line's terminator
+// too, or the deletion leaves a blank line behind.
+func trailingNewline(src string, end int) string {
+	if end >= len(src) {
+		return ""
+	}
+	if src[end] == '\r' {
+		if end+1 < len(src) && src[end+1] == '\n' {
+			return "\r\n"
+		}
+		return "\r"
+	}
+	if src[end] == '\n' {
+		return "\n"
+	}
+	return ""
 }
 
 // hasFunctionalDefaultDelimiters reports whether d matches the documented

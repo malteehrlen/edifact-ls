@@ -5,7 +5,7 @@ status: completed
 type: epic
 priority: normal
 created_at: 2026-09-02T11:38:49Z
-updated_at: 2026-09-02T11:53:31Z
+updated_at: 2026-09-02T12:17:06Z
 parent: edifact-ls-gdt6
 ---
 
@@ -99,6 +99,36 @@ same in a real nvim session via `vim.lsp.util.apply_workspace_edit`.
 
 ## Retro
 
+- Second post-completion fix, found by the user immediately after the
+  first one landed: applying the redundant-UNA fix emptied the line
+  but left a blank line behind, instead of removing the whole line.
+  Root cause: the Fix's OldText was exactly `ic.UNA.Raw` (9 bytes),
+  never including the line terminator that follows it in any
+  real-world, one-segment-per-line interchange (the common convention
+  -- see lexer.go's skipInterSegmentWhitespace) -- so deleting it left
+  the newline(s) in place. Fixed by having Lint consume a trailing
+  "\r\n"/"\n"/"\r" into the Fix's OldText when one immediately follows
+  the UNA advice (trailingNewline in lint.go); UNA can only ever start
+  at byte 0 (detectUNA requires it), so there's never a leading
+  newline to worry about, only a trailing one. This needed threading
+  src into Lint's signature (previously ic alone), a small, contained
+  change (only 3 call sites total).
+- Both post-completion bugs share a root cause worth remembering for
+  any future Fix-producing diagnostic: the two "obvious" positions
+  associated with a fix -- where the diagnostic is anchored for
+  display, and the exact span replaced -- are each narrower than what
+  a real edit actually needs to consider (respectively: too narrow for
+  interaction, and too narrow for the actual visual artifact left
+  behind). Neither was caught by unit tests using inline,
+  newline-free fixture strings (the project's dominant test-writing
+  habit for speed) -- both needed either a real multi-line fixture or
+  live nvim usage to surface. Added a dedicated newline-aware
+  regression test and strengthened the e2e UNA check to assert the
+  buffer's exact resulting lines (not just "no more error
+  diagnostics") specifically because "no diagnostic left" doesn't
+  catch a cosmetic artifact like a stray blank line -- worth defaulting
+  to exact-content assertions rather than absence-of-diagnostic ones
+  when a fix's whole point is a clean deletion.
 - Post-completion fix: the user tried this manually right after the epic
   closed and got no actions at all. Reproduced directly (a probe script
   requesting codeAction at various columns across the redundant-UNA

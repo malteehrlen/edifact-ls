@@ -1,6 +1,9 @@
 package edifact
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func lint(t *testing.T, src string) ErrorList {
 	t.Helper()
@@ -8,7 +11,7 @@ func lint(t *testing.T, src string) ErrorList {
 	if errs.HasErrors() {
 		t.Fatalf("unexpected syntax errors parsing %q: %v", src, errs)
 	}
-	return Lint(ic)
+	return Lint(ic, src)
 }
 
 func TestLintCleanInterchangeHasNoWarnings(t *testing.T) {
@@ -123,6 +126,42 @@ func TestLintRedundantUNAHasFix(t *testing.T) {
 	}
 	if e.Fix.Pos != (Position{Offset: 0, Line: 1, Column: 1}) {
 		t.Errorf("Fix.Pos = %+v, want the start of the UNA segment", e.Fix.Pos)
+	}
+}
+
+func TestLintRedundantUNAFixConsumesTrailingNewline(t *testing.T) {
+	// Regression: a real interchange with each segment on its own line
+	// (the common, human-readable convention -- see
+	// skipInterSegmentWhitespace) used to have its Fix delete only the
+	// 9-byte UNA advice, leaving a blank line behind. The fix must
+	// consume the line terminator too, so applying it removes the whole
+	// line.
+	for _, tc := range []struct {
+		name     string
+		newline  string
+		wantText string
+	}{
+		{"LF", "\n", "UNA:+.? '\n"},
+		{"CRLF", "\r\n", "UNA:+.? '\r\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			src := "UNA:+.? '" + tc.newline + "UNB+UNOA:1+S+R+201001:1200+1'\nUNH+1+ORDERS:D:96A:UN'\nBGM+220'\nUNT+3+1'\nUNZ+1+1'"
+			errs := lint(t, src)
+			if len(errs) != 1 {
+				t.Fatalf("got %d lint diagnostics, want 1: %v", len(errs), errs)
+			}
+			e := errs[0]
+			if e.Fix.OldText != tc.wantText {
+				t.Fatalf("Fix.OldText = %q, want %q (UNA plus its line terminator)", e.Fix.OldText, tc.wantText)
+			}
+			fixed := src[:e.Fix.Pos.Offset] + src[e.Fix.Pos.Offset+len(e.Fix.OldText):]
+			if fixed[0] == '\n' || fixed[0] == '\r' {
+				t.Fatalf("fixed text still starts with a blank line: %q", fixed)
+			}
+			if !strings.HasPrefix(fixed, "UNB+") {
+				t.Fatalf("fixed text = %q, want it to start directly with UNB", fixed)
+			}
+		})
 	}
 }
 
