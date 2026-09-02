@@ -352,7 +352,10 @@ check_hover("testdata/embedded-newline.edi", 4, 1, "Name and address")
 -- edifact-ls-x3pb: quick-fix code actions for the two mechanically-fixable
 -- diagnostic kinds.
 check_code_action("testdata/lint-info.edi", 0, 0, "Remove redundant UNA")
-check_code_action("testdata/envelope-count-mismatch.edi", 3, 0, "Fix UNT segment count")
+-- Cursor on the wrong value itself ("99" in "UNT+99"), not on the UNT tag --
+-- regression coverage for the range-matching fix in edifact-ls-x3pb (the
+-- action used to be reachable only from the tag's exact first byte).
+check_code_action("testdata/envelope-count-mismatch.edi", 3, 4, "Fix UNT segment count")
 check_formatting()
 check_minify()
 check_treesitter()

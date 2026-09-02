@@ -100,6 +100,36 @@ func TestTextDocumentCodeActionEnvelopeCountMismatch(t *testing.T) {
 	}
 }
 
+func TestTextDocumentCodeActionUNAAvailableAnywhereInItsSpan(t *testing.T) {
+	// Regression: the request range used to be checked only against the
+	// diagnostic's displayed range, which for a segment-anchored
+	// diagnostic like this is a single byte -- making the action
+	// effectively unreachable unless the cursor sat on that exact
+	// character. It must now resolve from any position across the whole
+	// 9-byte UNA advice this action actually removes.
+	text := "UNA:+.? 'UNB+UNOA:1+S+R+201001:1200+1'UNH+1+ORDERS:D:96A:UN'BGM+220'UNT+3+1'UNZ+1+1'"
+	for _, char := range []protocol.UInteger{0, 3, 5, 8} {
+		actions := codeActionsAt(t, text, 0, char, 0, char+1)
+		if len(actions) != 1 {
+			t.Errorf("character=%d: got %d actions, want 1", char, len(actions))
+		}
+	}
+}
+
+func TestTextDocumentCodeActionEnvelopeMismatchAvailableAtWrongValue(t *testing.T) {
+	// The Fix's own span is the wrong value itself (e.g. "99" in
+	// "UNT+99"), not the segment tag the diagnostic is anchored at -- a
+	// request range sitting on the wrong value, not just on "UNT", must
+	// also resolve the action.
+	text := "UNB+UNOA:1+S+R+201001:1200+1'UNH+1+ORDERS:D:96A:UN'BGM+220'UNT+99+1'UNZ+1+1'"
+	idx := strings.Index(text, "99")
+	char := protocol.UInteger(idx)
+	actions := codeActionsAt(t, text, 0, char, 0, char+1)
+	if len(actions) != 1 {
+		t.Fatalf("got %d actions, want 1 when the cursor is on the wrong value itself: %+v", len(actions), actions)
+	}
+}
+
 func TestTextDocumentCodeActionNoActionsForNonFixableDiagnostic(t *testing.T) {
 	// Missing UNT: a real diagnostic, but nothing to safely insert.
 	text := "UNB+UNOA:1+S+R+201001:1200+1'UNH+1+ORDERS:D:96A:UN'BGM+220'UNZ+1+1'"

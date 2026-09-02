@@ -5,7 +5,7 @@ status: completed
 type: epic
 priority: normal
 created_at: 2026-09-02T11:38:49Z
-updated_at: 2026-09-02T11:46:09Z
+updated_at: 2026-09-02T11:53:31Z
 parent: edifact-ls-gdt6
 ---
 
@@ -99,6 +99,26 @@ same in a real nvim session via `vim.lsp.util.apply_workspace_edit`.
 
 ## Retro
 
+- Post-completion fix: the user tried this manually right after the epic
+  closed and got no actions at all. Reproduced directly (a probe script
+  requesting codeAction at various columns across the redundant-UNA
+  fixture): the range-overlap check used only the diagnostic's own
+  displayed range (`errorRange(text, e.Pos)`), which per this project's
+  long-standing "non-zero-width where possible" convention is a single
+  byte wide -- so the action was only reachable with the cursor on that
+  *exact* character, which is not how anyone actually invokes a code
+  action. Fixed by also matching against the Fix's own replacement span
+  (`diagnosticRangeOverlaps` now checks both), which is wider and, for
+  the envelope-mismatch cases, is actually the more intuitive target
+  (the wrong value itself, e.g. "99" in "UNT+99") rather than the
+  segment tag. Confirmed fixed via a headless-nvim probe across several
+  cursor columns before and after, two new regression unit tests, and
+  updated one e2e check to invoke from the wrong value's own position
+  instead of the tag's first byte (the more realistic way a user
+  actually triggers it) -- this doubles as a caution about this
+  project's diagnostic-range convention: it's fine for a squiggle, but
+  narrow-range display shouldn't be reused unmodified as the sole
+  interaction target for something the user has to click into.
 - Splitting the data-model story from the handler story paid off
   exactly as planned: story 1 was pure, low-risk plumbing (no
   LSP-facing behavior change, verified by the full suite staying green

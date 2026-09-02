@@ -23,7 +23,7 @@ func (st *state) textDocumentCodeAction(context *glsp.Context, params *protocol.
 
 	var actions []protocol.CodeAction
 	for _, e := range errs {
-		if e.Fix == nil || !rangesOverlap(params.Range, errorRange(text, e.Pos)) {
+		if e.Fix == nil || !diagnosticRangeOverlaps(text, e, params.Range) {
 			continue
 		}
 
@@ -54,6 +54,19 @@ func (st *state) textDocumentCodeAction(context *glsp.Context, params *protocol.
 		})
 	}
 	return actions, nil
+}
+
+// diagnosticRangeOverlaps reports whether requested overlaps either of the
+// two spans a fixable diagnostic could reasonably be invoked from: the
+// diagnostic's own displayed range (errorRange -- e.g. a segment tag's
+// first character, where its squiggle appears) or its Fix's replacement
+// span (e.g. an envelope diagnostic's own wrong value, which is often not
+// the same span at all -- see edifact-ls-x3pb's retro). Checking only the
+// former made the action effectively unreachable unless the cursor sat on
+// that exact single byte; checking both lets a request from either the
+// flagged tag or the specific wrong text resolve it.
+func diagnosticRangeOverlaps(text string, e *edifact.Error, requested protocol.Range) bool {
+	return rangesOverlap(requested, errorRange(text, e.Pos)) || rangesOverlap(requested, fixRange(text, e.Fix))
 }
 
 // fixRange builds the exact LSP Range a Fix replaces: from Fix.Pos to
