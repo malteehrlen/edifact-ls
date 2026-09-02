@@ -16,11 +16,15 @@ naming what IS registered, not silence and not a false match.
 | CUSCAR | D | 99B | UN | https://service.unece.org/trade/untdid/d99b/trmd/cuscar_c.htm |
 | DELFOR | D | 20A | UN | https://service.unece.org/trade/untdid/d20a/trmd/delfor_c.htm |
 | DESADV | D | 20A | UN | https://service.unece.org/trade/untdid/d20a/trmd/desadv_c.htm |
+| DESADV | D | 99B | UN | https://service.unece.org/trade/untdid/d99b/trmd/desadv_c.htm |
 | IFTMCS | D | 21A | UN | https://service.unece.org/trade/untdid/d21a/trmd/iftmcs_c.htm |
 | IFTMIN | D | 20A | UN | https://service.unece.org/trade/untdid/d20a/trmd/iftmin_c.htm |
 | IFTSTA | D | 20A | UN | https://service.unece.org/trade/untdid/d20a/trmd/iftsta_c.htm |
 | INVOIC | D | 20A | UN | https://service.unece.org/trade/untdid/d20a/trmd/invoic_c.htm |
+| INVOIC | D | 99B | UN | https://service.unece.org/trade/untdid/d99b/trmd/invoic_c.htm |
 | INVRPT | D | 20A | UN | https://service.unece.org/trade/untdid/d20a/trmd/invrpt_c.htm |
 | ORDERS | D | 20A | UN | https://service.unece.org/trade/untdid/d20a/trmd/orders_c.htm |
+| ORDERS | D | 99B | UN | https://service.unece.org/trade/untdid/d99b/trmd/orders_c.htm |
 | ORDRSP | D | 20A | UN | https://service.unece.org/trade/untdid/d20a/trmd/ordrsp_c.htm |
+| ORDRSP | D | 99B | UN | https://service.unece.org/trade/untdid/d99b/trmd/ordrsp_c.htm |
 | PRICAT | D | 20A | UN | https://service.unece.org/trade/untdid/d20a/trmd/pricat_c.htm |
