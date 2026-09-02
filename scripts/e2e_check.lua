@@ -238,6 +238,7 @@ check_diagnostic("testdata/invoic-violation.edi", "maximum of 1", vim.diagnostic
 check_diagnostic("testdata/iftmin-violation.edi", "maximum of 1", vim.diagnostic.severity.ERROR)
 check_diagnostic("testdata/pricat-violation.edi", "maximum of 1", vim.diagnostic.severity.ERROR)
 check_diagnostic("testdata/aperak-violation.edi", "maximum of 1", vim.diagnostic.severity.ERROR)
+check_diagnostic("testdata/cuscar-violation.edi", "maximum of 1", vim.diagnostic.severity.ERROR)
 check_hover("testdata/minimal.edi", 0, 1, "Interchange header")
 check_hover("testdata/minimal.edi", 2, 1, "Beginning of message")
 -- Regression: a segment whose data is soft-wrapped across lines (a literal
