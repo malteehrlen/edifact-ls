@@ -161,6 +161,80 @@ func TestLexerEmptyComponentsAndElements(t *testing.T) {
 	}
 }
 
+// TestLexerSkipsNewlineMidData is a regression test for a real hang found
+// on user-supplied input: real-world interchanges sometimes soft-wrap a
+// long segment's data across multiple lines (e.g. a lengthy NAD address),
+// producing a literal CR/LF in the middle of segment data rather than
+// only between segments. An earlier version of next()'s data-run loop
+// treated any '\r'/'\n' as ending the run without consuming it, so the
+// very next call saw the same un-advanced newline and produced another
+// zero-width data token, forever -- an infinite loop, 100% CPU, no
+// progress. The fix skips (and consumes) embedded CR/LF the same way
+// skipInterSegmentWhitespace already does between segments, so this must
+// terminate and must not include the newline in the token's Raw.
+func TestLexerSkipsNewlineMidData(t *testing.T) {
+	var errs ErrorList
+	l := newLexer("AB\nCD'", DefaultDelimiters(), &errs)
+	toks := collectTokens(l) // must terminate; a hang here fails the test via its timeout
+
+	want := []tokenKind{tokenData, tokenSegmentTerminator, tokenEOF}
+	if len(toks) != len(want) {
+		t.Fatalf("got %d tokens, want %d: %+v", len(toks), len(want), toks)
+	}
+	for i, k := range want {
+		if toks[i].Kind != k {
+			t.Errorf("token %d: kind = %v, want %v", i, toks[i].Kind, k)
+		}
+	}
+	if toks[0].Raw != "ABCD" {
+		t.Errorf("toks[0].Raw = %q, want %q (newline dropped, not included)", toks[0].Raw, "ABCD")
+	}
+	if len(errs) != 0 {
+		t.Errorf("unexpected errors: %v", errs)
+	}
+}
+
+// TestLexerSkipsMultipleNewlinesMidData covers a run interrupted by CR/LF
+// more than once, and mixed \n/\r\n forms.
+func TestLexerSkipsMultipleNewlinesMidData(t *testing.T) {
+	var errs ErrorList
+	l := newLexer("AB\nCD\r\nEF'", DefaultDelimiters(), &errs)
+	toks := collectTokens(l)
+
+	if len(toks) != 3 || toks[0].Kind != tokenData || toks[1].Kind != tokenSegmentTerminator || toks[2].Kind != tokenEOF {
+		t.Fatalf("unexpected tokens: %+v", toks)
+	}
+	if toks[0].Raw != "ABCDEF" {
+		t.Errorf("toks[0].Raw = %q, want %q", toks[0].Raw, "ABCDEF")
+	}
+	if len(errs) != 0 {
+		t.Errorf("unexpected errors: %v", errs)
+	}
+}
+
+// TestLexerNewlineMidDataDoesNotBreakReleaseEscaping confirms the
+// newline-skipping change didn't disturb the adjacent release-character
+// escaping branch, which now also needs to explicitly write both its
+// bytes into the rebuilt Raw (previously a free zero-copy substring).
+func TestLexerNewlineMidDataDoesNotBreakReleaseEscaping(t *testing.T) {
+	var errs ErrorList
+	l := newLexer("AB?+CD\nEF'", DefaultDelimiters(), &errs)
+	toks := collectTokens(l)
+
+	if len(toks) != 3 || toks[0].Kind != tokenData {
+		t.Fatalf("unexpected tokens: %+v", toks)
+	}
+	if toks[0].Raw != "AB?+CDEF" {
+		t.Errorf("toks[0].Raw = %q, want %q (release-escaped '+' kept, newline dropped)", toks[0].Raw, "AB?+CDEF")
+	}
+	if got := Unescape(toks[0].Raw, DefaultDelimiters().Release); got != "AB+CDEF" {
+		t.Errorf("Unescape(%q) = %q, want %q", toks[0].Raw, got, "AB+CDEF")
+	}
+	if len(errs) != 0 {
+		t.Errorf("unexpected errors: %v", errs)
+	}
+}
+
 func TestLexerSkipsInterSegmentNewlines(t *testing.T) {
 	var errs ErrorList
 	l := newLexer("A'\r\nB'", DefaultDelimiters(), &errs)

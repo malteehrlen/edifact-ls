@@ -3,6 +3,7 @@ package edifact
 import (
 	"os"
 	"testing"
+	"time"
 )
 
 func TestParseValidInterchange(t *testing.T) {
@@ -229,6 +230,37 @@ func slicesEqual(a, b []string) bool {
 		}
 	}
 	return true
+}
+
+// TestParseDoesNotHangOnEmbeddedNewline is a regression test for a real
+// infinite loop found on user-supplied input: a segment whose data was
+// soft-wrapped across multiple physical lines (a literal '\n' embedded in
+// the data, not just between segments -- common in hand-wrapped or
+// legacy-gateway-exported EDIFACT, e.g. a long NAD address). The lexer's
+// data-run loop used to stop at a mid-data newline without consuming it,
+// so parseSegmentBody's next call saw the same byte again forever. Run
+// with an explicit deadline so a reintroduced hang fails this test
+// quickly instead of stalling the whole suite (or CI) indefinitely.
+func TestParseDoesNotHangOnEmbeddedNewline(t *testing.T) {
+	inputs := []string{
+		"UNH+1'NAD+N1++AB\nCD'UNT+2+1'",
+		"UNH+1'NAD+N1++AB\r\nCD'UNT+2+1'",
+		// Multiple embedded newlines in one segment, and one right at the
+		// very end just before the terminator.
+		"UNH+1'FTX+AAA+++A\nB\nC\n'UNT+2+1'",
+	}
+	for _, src := range inputs {
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			Parse(src)
+		}()
+		select {
+		case <-done:
+		case <-time.After(2 * time.Second):
+			t.Fatalf("Parse(%q) did not return within 2s (likely an infinite loop)", src)
+		}
+	}
 }
 
 func TestParseDoesNotPanic(t *testing.T) {

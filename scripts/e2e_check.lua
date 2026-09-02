@@ -240,6 +240,11 @@ check_diagnostic("testdata/pricat-violation.edi", "maximum of 1", vim.diagnostic
 check_diagnostic("testdata/aperak-violation.edi", "maximum of 1", vim.diagnostic.severity.ERROR)
 check_hover("testdata/minimal.edi", 0, 1, "Interchange header")
 check_hover("testdata/minimal.edi", 2, 1, "Beginning of message")
+-- Regression: a segment whose data is soft-wrapped across lines (a literal
+-- embedded newline, not just one between segments) used to hang the server
+-- entirely (see internal/edifact/lexer.go's next()) -- if that regressed,
+-- this hover would simply never come back within its wait timeout.
+check_hover("testdata/embedded-newline.edi", 4, 1, "Name and address")
 check_formatting()
 check_minify()
 check_treesitter()

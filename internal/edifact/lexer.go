@@ -1,5 +1,7 @@
 package edifact
 
+import "strings"
+
 // tokenKind classifies a single lexer token.
 type tokenKind int
 
@@ -122,25 +124,41 @@ func (l *lexer) next() token {
 	}
 
 	// Data run: everything up to (but not including) the next unescaped
-	// separator/terminator, EOF, or literal newline.
-	startOffset := l.pos
+	// separator/terminator or EOF. A literal CR/LF encountered mid-run
+	// carries no structural meaning -- the same rationale as
+	// skipInterSegmentWhitespace, which only covers newlines *between*
+	// segments, but real-world interchanges also soft-wrap long segments
+	// (e.g. a lengthy NAD address) across multiple lines purely for
+	// readability. It's skipped rather than included in the data, and
+	// critically must actually be consumed here rather than just ending
+	// the run: an earlier version did the latter, which (since callers
+	// keep asking for the next token) infinite-looped forever re-reading
+	// the same un-advanced newline as a succession of empty data tokens.
+	var raw strings.Builder
 	for !l.eof() {
 		c := l.src[l.pos]
 		if c == l.delims.Release {
 			relPos := l.position()
+			raw.WriteByte(c)
 			l.advance() // consume the release character itself
 			if l.eof() {
 				l.errs.Add(relPos, SeverityError, "release character %q at end of input with no character to escape", l.delims.Release)
 				break
 			}
+			raw.WriteByte(l.src[l.pos])
 			l.advance() // consume the escaped character literally
 			continue
 		}
-		if c == l.delims.Component || c == l.delims.Element || c == l.delims.Terminator || c == '\r' || c == '\n' {
+		if c == l.delims.Component || c == l.delims.Element || c == l.delims.Terminator {
 			break
 		}
+		if c == '\r' || c == '\n' {
+			l.advance() // insignificant soft-wrap; skip, don't include in Raw
+			continue
+		}
+		raw.WriteByte(c)
 		l.advance()
 	}
 
-	return token{Kind: tokenData, Raw: l.src[startOffset:l.pos], Pos: start}
+	return token{Kind: tokenData, Raw: raw.String(), Pos: start}
 }
