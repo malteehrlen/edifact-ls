@@ -252,6 +252,64 @@ local function check_hover(fixture, line, character, expect_substring)
     " includes a message containing " .. vim.inspect(expect_substring))
 end
 
+-- Check: textDocument/codeAction at a given 0-based line/character returns
+-- a quickfix action whose title contains expect_title_substring; applying
+-- that action's edit (exactly as a real client would) is expected to
+-- resolve the problem, verified by re-checking diagnostics on the buffer
+-- afterward.
+local function check_code_action(fixture, line, character, expect_title_substring)
+  local path = vim.fn.fnamemodify(fixture, ":p")
+  vim.cmd.edit({ path, bang = true })
+
+  local attached = vim.wait(3000, function()
+    local clients = vim.lsp.get_clients({ name = "edifact_ls", bufnr = 0 })
+    return #clients > 0 and clients[1].initialized == true
+  end, 50)
+  if not attached then
+    fail("edifact_ls LSP client did not attach to " .. path .. " within timeout")
+    return
+  end
+
+  local params = {
+    textDocument = vim.lsp.util.make_text_document_params(0),
+    range = {
+      start = { line = line, character = character },
+      ["end"] = { line = line, character = character + 1 },
+    },
+    context = { diagnostics = {} },
+  }
+  local results = vim.lsp.buf_request_sync(0, "textDocument/codeAction", params, 3000)
+
+  local action = nil
+  for _, res in pairs(results or {}) do
+    for _, a in ipairs(res.result or {}) do
+      if a.title and a.title:find(expect_title_substring, 1, true) then
+        action = a
+      end
+    end
+  end
+
+  if not action then
+    fail("codeAction at " .. path .. ":" .. line .. ":" .. character ..
+      " did not include an action titled like " .. vim.inspect(expect_title_substring) ..
+      "; got: " .. vim.inspect(results))
+    return
+  end
+
+  vim.lsp.util.apply_workspace_edit(action.edit, "utf-16")
+  vim.wait(500)
+
+  local errors = vim.tbl_filter(function(d) return d.severity == vim.diagnostic.severity.ERROR end, vim.diagnostic.get(0))
+  if #errors > 0 then
+    fail("after applying code action at " .. path .. ", still have error diagnostics: " ..
+      vim.inspect(vim.tbl_map(function(d) return d.message end, errors)))
+    return
+  end
+
+  pass("codeAction at " .. path .. ":" .. line .. ":" .. character ..
+    " (" .. expect_title_substring .. ") applies cleanly")
+end
+
 check_lsp_attaches()
 check_diagnostic("testdata/syntax-error.edi", "invalid segment tag", vim.diagnostic.severity.ERROR)
 check_diagnostic("testdata/envelope-error.edi", "missing UNZ", vim.diagnostic.severity.ERROR)
@@ -291,6 +349,10 @@ check_hover("testdata/minimal.edi", 2, 1, "Beginning of message")
 -- entirely (see internal/edifact/lexer.go's next()) -- if that regressed,
 -- this hover would simply never come back within its wait timeout.
 check_hover("testdata/embedded-newline.edi", 4, 1, "Name and address")
+-- edifact-ls-x3pb: quick-fix code actions for the two mechanically-fixable
+-- diagnostic kinds.
+check_code_action("testdata/lint-info.edi", 0, 0, "Remove redundant UNA")
+check_code_action("testdata/envelope-count-mismatch.edi", 3, 0, "Fix UNT segment count")
 check_formatting()
 check_minify()
 check_treesitter()

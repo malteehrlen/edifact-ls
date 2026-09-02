@@ -1,11 +1,11 @@
 ---
 # edifact-ls-x3pb
 title: Quick-fix code actions for mechanically-fixable diagnostics
-status: in-progress
+status: completed
 type: epic
 priority: normal
 created_at: 2026-09-02T11:38:49Z
-updated_at: 2026-09-02T11:38:49Z
+updated_at: 2026-09-02T11:46:09Z
 parent: edifact-ls-gdt6
 ---
 
@@ -66,20 +66,69 @@ derive on its own, so those stay diagnostics-only.
 
 # Acceptance Criteria
 
-[ ] `edifact.Error` carries optional `Code` and `Fix` fields; `Fix` is
+[x] `edifact.Error` carries optional `Code` and `Fix` fields; `Fix` is
 populated for the redundant-`UNA` case and all six `UNT`/`UNE`/`UNZ`
 count-or-reference mismatch cases, and left nil everywhere else
-[ ] `Diagnostic.Code` is populated in the LSP translation layer for
+[x] `Diagnostic.Code` is populated in the LSP translation layer for
 every diagnostic that has a `Code`, independent of whether code
 actions exist yet
-[ ] `textDocument/codeAction` returns a quickfix `CodeAction` with a
+[x] `textDocument/codeAction` returns a quickfix `CodeAction` with a
 correct `WorkspaceEdit` for each fixable diagnostic overlapping the
 requested range, and returns nothing for ranges with no fixable
 diagnostic
-[ ] Unit tests confirm the redundant-UNA fix and each envelope
+[x] Unit tests confirm the redundant-UNA fix and each envelope
 mismatch fix independently
-[ ] e2e check: opening a fixture with a redundant UNA (or a wrong
+[x] e2e check: opening a fixture with a redundant UNA (or a wrong
 envelope count), requesting `textDocument/codeAction` via
 `buf_request_sync`, applying the returned edit, and asserting the
 buffer changed as expected, in a real nvim session
-[ ] Full suite (`make test`) and e2e harness (`make test-e2e`) green
+[x] Full suite (`make test`) and e2e harness (`make test-e2e`) green
+
+## Summary of Changes
+
+Both stories completed as scoped: edifact-ls-338y (`Error.Code`/`Fix`
+data model, populated at the redundant-UNA and six envelope
+count/reference-mismatch call sites) and edifact-ls-n3yd
+(`textDocument/codeAction` handler consuming it). See each story's own
+Summary of Changes for the file-level detail. Net result: opening a
+document with a redundant UNA or a wrong UNT/UNE/UNZ count/reference
+now offers a quickfix code action in the editor that, when applied,
+genuinely resolves the diagnostic -- verified both by unit tests that
+apply the fix and re-validate, and by two new e2e checks that do the
+same in a real nvim session via `vim.lsp.util.apply_workspace_edit`.
+
+## Retro
+
+- Splitting the data-model story from the handler story paid off
+  exactly as planned: story 1 was pure, low-risk plumbing (no
+  LSP-facing behavior change, verified by the full suite staying green
+  with zero e2e deltas), so story 2 could focus entirely on the
+  handler and range-filtering logic without also re-deriving which
+  diagnostics are fixable.
+- The design discussion done well before implementation (mapping every
+  diagnostic source against "is the fix mechanically derivable")
+  turned out to be accurate on first implementation -- no diagnostic
+  kind was discovered mid-story to need reclassifying either way. That
+  discussion, not skipped or compressed, is why the scope held.
+- One real subtlety only became visible while writing the handler
+  test, not the design doc: the diagnostic's displayed range
+  (`errorRange(text, e.Pos)`) and the Fix's own replacement span
+  (`Fix.Pos`/`OldText`) are not the same span for the envelope-mismatch
+  cases -- e.Pos is the segment's position (e.g. UNT's), while Fix.Pos
+  is the specific wrong component's position. Code-action range
+  filtering correctly uses the former (matching what the client
+  actually sees highlighted), while the edit itself correctly uses the
+  latter (the precise text to replace). Worth remembering for any
+  future diagnostic-with-fix: these two positions can differ, and
+  conflating them would either miss legitimate requests or replace the
+  wrong span.
+- Reusing `toDiagnostic` (factored out of `diagnostics.go`) so the
+  code action's `Diagnostics` field is built through the exact same
+  path as what's already published, rather than a second hand-rolled
+  translation, is a small thing but avoids a class of "the code action
+  references a diagnostic that doesn't quite match what the client has"
+  bug before it could exist.
+- No adjustments needed before starting further work in this area. A
+  natural, not-yet-requested follow-up would be surfacing `Code` as a
+  stable id clients can build keybindings/quickfix-all-in-file
+  behavior around, but that's speculative until asked for.

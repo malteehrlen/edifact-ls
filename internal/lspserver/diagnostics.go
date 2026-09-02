@@ -74,18 +74,25 @@ func (st *state) publishDiagnostics(context *glsp.Context, uri protocol.Document
 func diagnosticsForText(text string) []protocol.Diagnostic {
 	_, errs := edifact.Validate(text)
 
-	source := Name
 	diagnostics := make([]protocol.Diagnostic, 0, len(errs))
 	for _, e := range errs {
-		diagnostics = append(diagnostics, protocol.Diagnostic{
-			Range:    errorRange(text, e.Pos),
-			Severity: diagnosticSeverity(e.Severity),
-			Code:     diagnosticCode(e.Code),
-			Source:   &source,
-			Message:  e.Message,
-		})
+		diagnostics = append(diagnostics, toDiagnostic(text, e))
 	}
 	return diagnostics
+}
+
+// toDiagnostic translates one edifact.Error into an LSP Diagnostic. Shared
+// with codeaction.go, which needs the same translation to populate a
+// CodeAction's Diagnostics field with the exact diagnostic it resolves.
+func toDiagnostic(text string, e *edifact.Error) protocol.Diagnostic {
+	source := Name
+	return protocol.Diagnostic{
+		Range:    errorRange(text, e.Pos),
+		Severity: diagnosticSeverity(e.Severity),
+		Code:     diagnosticCode(e.Code),
+		Source:   &source,
+		Message:  e.Message,
+	}
 }
 
 // diagnosticCode wraps a non-empty edifact.Error.Code for the protocol's
