@@ -101,3 +101,41 @@ func TestLintNoInfoOnCustomUNA(t *testing.T) {
 		t.Fatalf("unexpected lint diagnostics for a non-default UNA: %v", errs)
 	}
 }
+
+func TestLintRedundantUNAHasFix(t *testing.T) {
+	src := "UNA:+.? 'UNB+UNOA:1+S+R+201001:1200+1'UNH+1+ORDERS:D:96A:UN'BGM+220'UNT+3+1'UNZ+1+1'"
+	errs := lint(t, src)
+	if len(errs) != 1 {
+		t.Fatalf("got %d lint diagnostics, want 1: %v", len(errs), errs)
+	}
+	e := errs[0]
+	if e.Code != "redundant-una" {
+		t.Errorf("Code = %q, want %q", e.Code, "redundant-una")
+	}
+	if e.Fix == nil {
+		t.Fatalf("Fix is nil, want a fix that removes the UNA segment")
+	}
+	if e.Fix.OldText != "UNA:+.? '" {
+		t.Errorf("Fix.OldText = %q, want the 9-byte UNA advice", e.Fix.OldText)
+	}
+	if e.Fix.NewText != "" {
+		t.Errorf("Fix.NewText = %q, want empty (deletion)", e.Fix.NewText)
+	}
+	if e.Fix.Pos != (Position{Offset: 0, Line: 1, Column: 1}) {
+		t.Errorf("Fix.Pos = %+v, want the start of the UNA segment", e.Fix.Pos)
+	}
+}
+
+func TestLintReservedTagWarningHasNoFix(t *testing.T) {
+	src := "UNB+UNOA:1+S+R+201001:1200+1'UNH+1+ORDERS:D:96A:UN'UNX+1'UNT+4+1'UNZ+1+1'"
+	errs := lint(t, src)
+	if len(errs) != 1 {
+		t.Fatalf("got %d lint diagnostics, want 1: %v", len(errs), errs)
+	}
+	if errs[0].Fix != nil {
+		t.Errorf("Fix = %+v, want nil -- there's no safe rename to derive", errs[0].Fix)
+	}
+	if errs[0].Code != "" {
+		t.Errorf("Code = %q, want empty for a non-fixable diagnostic", errs[0].Code)
+	}
+}

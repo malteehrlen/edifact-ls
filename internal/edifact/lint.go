@@ -40,7 +40,12 @@ func Lint(ic *Interchange) ErrorList {
 	}
 
 	if ic.UNA != nil && hasFunctionalDefaultDelimiters(ic.Delimiters) {
-		errs.Add(ic.UNA.Pos, SeverityInfo, "UNA service string advice defines exactly the default component/element/release/terminator delimiters%s; it can be safely omitted", decimalMarkNote(ic.Delimiters.Decimal))
+		errs.AddFixable(ic.UNA.Pos, SeverityInfo, "redundant-una", &Fix{
+			Title:   "Remove redundant UNA service string advice",
+			Pos:     ic.UNA.Pos,
+			OldText: ic.UNA.Raw,
+			NewText: "",
+		}, "UNA service string advice defines exactly the default component/element/release/terminator delimiters%s; it can be safely omitted", decimalMarkNote(ic.Delimiters.Decimal))
 	}
 
 	return errs

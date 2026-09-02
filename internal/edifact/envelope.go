@@ -2,6 +2,32 @@ package edifact
 
 import "strconv"
 
+// componentRaw returns the exact, still-escaped source text of the
+// component at (elementIndex, componentIndex), or "" if either index is
+// out of range. Unlike ComponentN (which unescapes), this is for copying a
+// value verbatim into another segment via a Fix, where re-escaping would
+// risk introducing a mismatch with the source's own escaping choices.
+func componentRaw(seg *Segment, elementIndex, componentIndex int) string {
+	el := seg.Element0(elementIndex)
+	if el == nil || componentIndex < 0 || componentIndex >= len(el.Components) {
+		return ""
+	}
+	return el.Components[componentIndex].Raw
+}
+
+// fixReplaceComponent returns a Fix replacing the exact text of the
+// component at (elementIndex, componentIndex) on seg with replacement, or
+// nil if that component doesn't exist -- there's no span to replace, so
+// nothing mechanical to fix.
+func fixReplaceComponent(title string, seg *Segment, elementIndex, componentIndex int, replacement string) *Fix {
+	el := seg.Element0(elementIndex)
+	if el == nil || componentIndex < 0 || componentIndex >= len(el.Components) {
+		return nil
+	}
+	c := el.Components[componentIndex]
+	return &Fix{Title: title, Pos: c.Pos, OldText: c.Raw, NewText: replacement}
+}
+
 // messageSpan tracks one UNH..UNT message while scanning an interchange's
 // flat segment list.
 type messageSpan struct {
@@ -123,10 +149,14 @@ func ValidateEnvelopes(ic *Interchange) ErrorList {
 		}
 
 		if gotCount := unz.Component0(0, d); gotCount != wantCount {
-			errs.Add(unz.Pos, SeverityError, "UNZ interchange control count is %q, want %q (%s)", gotCount, wantCount, countMeaning)
+			errs.AddFixable(unz.Pos, SeverityError, "envelope-count-mismatch",
+				fixReplaceComponent("Fix UNZ interchange control count", unz, 0, 0, wantCount),
+				"UNZ interchange control count is %q, want %q (%s)", gotCount, wantCount, countMeaning)
 		}
 		if gotRef := unz.Component0(1, d); gotRef != wantRef {
-			errs.Add(unz.Pos, SeverityError, "UNZ interchange control reference %q does not match UNB's %q", gotRef, wantRef)
+			errs.AddFixable(unz.Pos, SeverityError, "envelope-reference-mismatch",
+				fixReplaceComponent("Fix UNZ interchange control reference", unz, 1, 0, componentRaw(unb, 4, 0)),
+				"UNZ interchange control reference %q does not match UNB's %q", gotRef, wantRef)
 		}
 	}
 
@@ -138,12 +168,16 @@ func ValidateEnvelopes(ic *Interchange) ErrorList {
 
 		wantCount := strconv.Itoa(len(g.messages))
 		if gotCount := g.une.Component0(0, d); gotCount != wantCount {
-			errs.Add(g.une.Pos, SeverityError, "UNE number of messages is %q, want %q", gotCount, wantCount)
+			errs.AddFixable(g.une.Pos, SeverityError, "envelope-count-mismatch",
+				fixReplaceComponent("Fix UNE number of messages", g.une, 0, 0, wantCount),
+				"UNE number of messages is %q, want %q", gotCount, wantCount)
 		}
 
 		wantRef := g.ung.Component0(4, d)
 		if gotRef := g.une.Component0(1, d); gotRef != wantRef {
-			errs.Add(g.une.Pos, SeverityError, "UNE functional group reference %q does not match UNG's %q", gotRef, wantRef)
+			errs.AddFixable(g.une.Pos, SeverityError, "envelope-reference-mismatch",
+				fixReplaceComponent("Fix UNE functional group reference", g.une, 1, 0, componentRaw(g.ung, 4, 0)),
+				"UNE functional group reference %q does not match UNG's %q", gotRef, wantRef)
 		}
 	}
 
@@ -155,12 +189,16 @@ func ValidateEnvelopes(ic *Interchange) ErrorList {
 
 		wantCount := strconv.Itoa(m.segmentCount)
 		if gotCount := m.unt.Component0(0, d); gotCount != wantCount {
-			errs.Add(m.unt.Pos, SeverityError, "UNT segment count is %q, want %q (segments from UNH to UNT inclusive)", gotCount, wantCount)
+			errs.AddFixable(m.unt.Pos, SeverityError, "envelope-count-mismatch",
+				fixReplaceComponent("Fix UNT segment count", m.unt, 0, 0, wantCount),
+				"UNT segment count is %q, want %q (segments from UNH to UNT inclusive)", gotCount, wantCount)
 		}
 
 		wantRef := m.unh.Component0(0, d)
 		if gotRef := m.unt.Component0(1, d); gotRef != wantRef {
-			errs.Add(m.unt.Pos, SeverityError, "UNT message reference %q does not match UNH's %q", gotRef, wantRef)
+			errs.AddFixable(m.unt.Pos, SeverityError, "envelope-reference-mismatch",
+				fixReplaceComponent("Fix UNT message reference", m.unt, 1, 0, componentRaw(m.unh, 0, 0)),
+				"UNT message reference %q does not match UNH's %q", gotRef, wantRef)
 		}
 	}
 

@@ -80,11 +80,21 @@ func diagnosticsForText(text string) []protocol.Diagnostic {
 		diagnostics = append(diagnostics, protocol.Diagnostic{
 			Range:    errorRange(text, e.Pos),
 			Severity: diagnosticSeverity(e.Severity),
+			Code:     diagnosticCode(e.Code),
 			Source:   &source,
 			Message:  e.Message,
 		})
 	}
 	return diagnostics
+}
+
+// diagnosticCode wraps a non-empty edifact.Error.Code for the protocol's
+// code field, or returns nil when there's no stable code to report.
+func diagnosticCode(code string) *protocol.IntegerOrString {
+	if code == "" {
+		return nil
+	}
+	return &protocol.IntegerOrString{Value: code}
 }
 
 func diagnosticSeverity(s edifact.Severity) *protocol.DiagnosticSeverity {

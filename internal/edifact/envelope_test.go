@@ -202,3 +202,118 @@ func containsMessage(errs ErrorList, substr string) bool {
 	}
 	return false
 }
+
+// errorContaining returns the first Error whose Message contains substr,
+// or nil.
+func errorContaining(errs ErrorList, substr string) *Error {
+	for _, e := range errs {
+		if strings.Contains(e.Message, substr) {
+			return e
+		}
+	}
+	return nil
+}
+
+// applyFix splices f into src, the same way a real client would apply the
+// WorkspaceEdit derived from it.
+func applyFix(src string, f *Fix) string {
+	return src[:f.Pos.Offset] + f.NewText + src[f.Pos.Offset+len(f.OldText):]
+}
+
+// assertFixResolves applies e's Fix to src and asserts re-validating the
+// result no longer contains wantGoneSubstr -- i.e. the fix actually fixes
+// the problem, not just that some Fix is present.
+func assertFixResolves(t *testing.T, src string, e *Error, wantGoneSubstr string) {
+	t.Helper()
+	if e == nil {
+		t.Fatalf("no diagnostic found containing %q", wantGoneSubstr)
+	}
+	if e.Fix == nil {
+		t.Fatalf("diagnostic %q has no Fix", e.Message)
+	}
+	fixed := applyFix(src, e.Fix)
+	errs := validate(t, fixed)
+	if containsMessage(errs, wantGoneSubstr) {
+		t.Fatalf("applying Fix did not resolve the diagnostic; still present after fix: %v (fixed source: %q)", errs, fixed)
+	}
+}
+
+func TestValidateEnvelopesMismatchedInterchangeControlCountHasFix(t *testing.T) {
+	src := "UNB+UNOA:1+S+R+201001:1200+1'UNH+1+ORDERS:D:96A:UN'BGM+220'UNT+3+1'UNZ+2+1'"
+	errs := validate(t, src)
+	e := errorContaining(errs, "interchange control count")
+	if e.Code != "envelope-count-mismatch" {
+		t.Errorf("Code = %q, want %q", e.Code, "envelope-count-mismatch")
+	}
+	assertFixResolves(t, src, e, "interchange control count")
+}
+
+func TestValidateEnvelopesMismatchedInterchangeControlReferenceHasFix(t *testing.T) {
+	src := "UNB+UNOA:1+S+R+201001:1200+1'UNH+1+ORDERS:D:96A:UN'BGM+220'UNT+3+1'UNZ+1+999'"
+	errs := validate(t, src)
+	e := errorContaining(errs, "control reference")
+	if e.Code != "envelope-reference-mismatch" {
+		t.Errorf("Code = %q, want %q", e.Code, "envelope-reference-mismatch")
+	}
+	assertFixResolves(t, src, e, "control reference")
+}
+
+func TestValidateEnvelopesMismatchedMessageSegmentCountHasFix(t *testing.T) {
+	src := "UNB+UNOA:1+S+R+201001:1200+1'UNH+1+ORDERS:D:96A:UN'BGM+220'UNT+99+1'UNZ+1+1'"
+	errs := validate(t, src)
+	e := errorContaining(errs, "UNT segment count")
+	if e.Code != "envelope-count-mismatch" {
+		t.Errorf("Code = %q, want %q", e.Code, "envelope-count-mismatch")
+	}
+	assertFixResolves(t, src, e, "UNT segment count")
+}
+
+func TestValidateEnvelopesMismatchedMessageReferenceHasFix(t *testing.T) {
+	src := "UNB+UNOA:1+S+R+201001:1200+1'UNH+1+ORDERS:D:96A:UN'BGM+220'UNT+3+999'UNZ+1+1'"
+	errs := validate(t, src)
+	e := errorContaining(errs, "UNT message reference")
+	if e.Code != "envelope-reference-mismatch" {
+		t.Errorf("Code = %q, want %q", e.Code, "envelope-reference-mismatch")
+	}
+	assertFixResolves(t, src, e, "UNT message reference")
+}
+
+func TestValidateEnvelopesFunctionalGroupMismatchedMessageCountHasFix(t *testing.T) {
+	src := "UNB+UNOA:1+S+R+201001:1200+1'" +
+		"UNG+INVOIC+15623+23457+201001:1200+G1+UN+96A:1'" +
+		"UNH+1+ORDERS:D:96A:UN'BGM+220'UNT+3+1'" +
+		"UNE+99+G1'" +
+		"UNZ+1+1'"
+	errs := validate(t, src)
+	e := errorContaining(errs, "UNE number of messages")
+	if e.Code != "envelope-count-mismatch" {
+		t.Errorf("Code = %q, want %q", e.Code, "envelope-count-mismatch")
+	}
+	assertFixResolves(t, src, e, "UNE number of messages")
+}
+
+func TestValidateEnvelopesFunctionalGroupMismatchedReferenceHasFix(t *testing.T) {
+	src := "UNB+UNOA:1+S+R+201001:1200+1'" +
+		"UNG+INVOIC+15623+23457+201001:1200+G1+UN+96A:1'" +
+		"UNH+1+ORDERS:D:96A:UN'BGM+220'UNT+3+1'" +
+		"UNE+1+G999'" +
+		"UNZ+1+1'"
+	errs := validate(t, src)
+	e := errorContaining(errs, "functional group reference")
+	if e.Code != "envelope-reference-mismatch" {
+		t.Errorf("Code = %q, want %q", e.Code, "envelope-reference-mismatch")
+	}
+	assertFixResolves(t, src, e, "functional group reference")
+}
+
+func TestValidateEnvelopesMissingUNTHasNoFix(t *testing.T) {
+	src := "UNB+UNOA:1+S+R+201001:1200+1'UNH+1+ORDERS:D:96A:UN'BGM+220'UNZ+1+1'"
+	errs := validate(t, src)
+	e := errorContaining(errs, "missing its UNT")
+	if e.Fix != nil {
+		t.Errorf("Fix = %+v, want nil -- there's nothing to safely insert", e.Fix)
+	}
+	if e.Code != "" {
+		t.Errorf("Code = %q, want empty for a non-fixable diagnostic", e.Code)
+	}
+}

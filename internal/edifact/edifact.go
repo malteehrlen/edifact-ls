@@ -80,6 +80,25 @@ type Error struct {
 	Pos      Position
 	Severity Severity
 	Message  string
+
+	// Code is a stable, machine-readable identifier for this diagnostic's
+	// kind (e.g. "redundant-una", "envelope-count-mismatch"), used by
+	// clients to filter/match on without parsing Message's prose. Empty
+	// when there's nothing more stable to offer than the message text.
+	Code string
+
+	// Fix is the mechanical edit that resolves this diagnostic, if one
+	// can be derived without guessing at user intent. Nil when the
+	// diagnostic isn't mechanically fixable.
+	Fix *Fix
+}
+
+// Fix is a single, exact text replacement that resolves an Error.
+type Fix struct {
+	Title   string   // human-readable, e.g. "Remove redundant UNA service string advice"
+	Pos     Position // start of the exact span to replace
+	OldText string   // sanity-checked against current buffer text before applying
+	NewText string   // "" for a deletion
 }
 
 func (e *Error) Error() string {
@@ -89,9 +108,15 @@ func (e *Error) Error() string {
 // ErrorList accumulates Errors in the order they were found.
 type ErrorList []*Error
 
-// Add appends a new formatted error.
+// Add appends a new formatted error with no Code or Fix.
 func (el *ErrorList) Add(pos Position, severity Severity, format string, args ...any) {
 	*el = append(*el, &Error{Pos: pos, Severity: severity, Message: fmt.Sprintf(format, args...)})
+}
+
+// AddFixable appends a new formatted error carrying a stable Code and,
+// when the caller can derive one, a mechanical Fix.
+func (el *ErrorList) AddFixable(pos Position, severity Severity, code string, fix *Fix, format string, args ...any) {
+	*el = append(*el, &Error{Pos: pos, Severity: severity, Message: fmt.Sprintf(format, args...), Code: code, Fix: fix})
 }
 
 // HasErrors reports whether the list contains any SeverityError entries.
