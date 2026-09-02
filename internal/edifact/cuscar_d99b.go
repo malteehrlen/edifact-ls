@@ -40,6 +40,7 @@ func init() {
 	RegisterSchema(
 		MessageID{Type: "CUSCAR", Version: "D", Release: "99B", Agency: "UN"},
 		cuscarD99bSchema,
+		"https://service.unece.org/trade/untdid/d99b/trmd/cuscar_c.htm",
 	)
 }
 

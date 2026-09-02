@@ -33,18 +33,60 @@ func messageIDOf(unh *Segment, d Delimiters) MessageID {
 	}
 }
 
+// registeredSchema pairs a Schema with the source it was transcribed
+// from, so provenance travels as queryable data (for ListRegisteredSchemas
+// and everything built on it) instead of living only in a Go doc comment.
+type registeredSchema struct {
+	Schema Schema
+	Source string
+}
+
 // schemaRegistry holds every Schema registered via RegisterSchema, keyed
 // by the exact MessageID it applies to.
-var schemaRegistry = map[MessageID]Schema{}
+var schemaRegistry = map[MessageID]registeredSchema{}
 
 // RegisterSchema registers schema as the structural specification for
-// messages self-reporting id in their UNH. Intended to be called once
+// messages self-reporting id in their UNH, citing source (the canonical
+// spec URL it was transcribed from). Intended to be called once
 // (typically from a package-level init in a file dedicated to one message
 // type's schema data, e.g. an IFTMCS-D-21A source file) -- adding a new
 // message type should never require touching the registry, the validator,
 // or diagnostics wiring, only a new schema-data file that calls this.
-func RegisterSchema(id MessageID, schema Schema) {
-	schemaRegistry[id] = schema
+func RegisterSchema(id MessageID, schema Schema, source string) {
+	schemaRegistry[id] = registeredSchema{Schema: schema, Source: source}
+}
+
+// SchemaInfo pairs a registered MessageID with the source it was
+// transcribed from, for listing/documentation purposes (the `edifact-ls
+// schemas` CLI command and the generated SUPPORTED_MESSAGES.md both build
+// on this).
+type SchemaInfo struct {
+	ID     MessageID
+	Source string
+}
+
+// ListRegisteredSchemas returns every registered schema's identity and
+// source, sorted by Type, then Version, then Release, then Agency, for
+// deterministic output.
+func ListRegisteredSchemas() []SchemaInfo {
+	infos := make([]SchemaInfo, 0, len(schemaRegistry))
+	for id, rs := range schemaRegistry {
+		infos = append(infos, SchemaInfo{ID: id, Source: rs.Source})
+	}
+	sort.Slice(infos, func(i, j int) bool {
+		a, b := infos[i].ID, infos[j].ID
+		if a.Type != b.Type {
+			return a.Type < b.Type
+		}
+		if a.Version != b.Version {
+			return a.Version < b.Version
+		}
+		if a.Release != b.Release {
+			return a.Release < b.Release
+		}
+		return a.Agency < b.Agency
+	})
+	return infos
 }
 
 // registeredVersionsOf lists the version:release:agency of every schema
@@ -99,8 +141,8 @@ func validateOneMessage(unh *Segment, body []Segment, untPos Position, d Delimit
 	var errs ErrorList
 	id := messageIDOf(unh, d)
 
-	if schema, ok := schemaRegistry[id]; ok {
-		violations := ValidateSchema(schema, body, untPos)
+	if rs, ok := schemaRegistry[id]; ok {
+		violations := ValidateSchema(rs.Schema, body, untPos)
 		for _, v := range violations {
 			v.Message = fmt.Sprintf("%s, as specified by message type %s %s on line %d", v.Message, id.Type, id.versionString(), unh.Pos.Line)
 		}

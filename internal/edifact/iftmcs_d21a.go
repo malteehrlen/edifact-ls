@@ -29,6 +29,7 @@ func init() {
 	RegisterSchema(
 		MessageID{Type: "IFTMCS", Version: "D", Release: "21A", Agency: "UN"},
 		iftmcsD21ASchema,
+		"https://service.unece.org/trade/untdid/d21a/trmd/iftmcs_c.htm",
 	)
 }
 

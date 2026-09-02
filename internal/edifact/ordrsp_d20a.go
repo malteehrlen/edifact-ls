@@ -24,6 +24,7 @@ func init() {
 	RegisterSchema(
 		MessageID{Type: "ORDRSP", Version: "D", Release: "20A", Agency: "UN"},
 		ordrspD20aSchema,
+		"https://service.unece.org/trade/untdid/d20a/trmd/ordrsp_c.htm",
 	)
 }
 

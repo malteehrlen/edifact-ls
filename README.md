@@ -17,11 +17,12 @@ Disclamer: This project is 100% generated code.
   string advice (version-aware: distinguishes ISO 9735 versions 1–3 vs. 4
   conventions).
 - Message-specification validation — segment/group presence, order, and
-  repeat counts checked against the real UN/EDIFACT branching diagram for
-  11 message types (IFTMCS, ORDERS, ORDRSP, INVOIC, DESADV, IFTMIN,
-  IFTSTA, PRICAT, INVRPT, DELFOR, APERAK), not a hand-rolled
-  approximation — each transcribed and verified against UNECE's own
-  segment tables.
+  repeat counts checked against the real UN/EDIFACT branching diagram,
+  not a hand-rolled approximation — each schema transcribed and verified
+  against UNECE's own segment tables. See
+  [`docs/SUPPORTED_MESSAGES.md`](docs/SUPPORTED_MESSAGES.md) (or run
+  `edifact-ls schemas`) for the exact, up-to-date list of message
+  types/versions covered.
 - Content validation — mandatory data element/component presence checked
   within individual segments (BGM, DTM, CTA), independent of message
   type.
@@ -128,6 +129,11 @@ the editor uses — without starting the language server. Prints each
 diagnostic as `line:col: severity: message` and exits `1` if any is
 error-severity, `0` otherwise. Useful in CI or a pre-commit hook.
 
+`edifact-ls schemas` lists every message specification structural
+validation is available for, one per line as `TYPE VERSION:RELEASE:AGENCY
+SOURCE` — the same data behind
+[`docs/SUPPORTED_MESSAGES.md`](docs/SUPPORTED_MESSAGES.md).
+
 ## Development
 
 Project status and planned work are tracked as "beans" (via the `beans`
@@ -157,7 +163,13 @@ current backlog.
 make build     # -> dist/edifact-ls
 make test      # go vet + go test ./...
 make test-e2e  # build + run the headless-nvim e2e harness (see below)
+make docs      # regenerate docs/SUPPORTED_MESSAGES.md from the registered schemas
 ```
+
+Adding or changing a registered message schema requires re-running `make
+docs` and committing the result — `TestSupportedMessagesDocIsUpToDate`
+(part of `make test`) fails if the checked-in doc and the registry
+disagree.
 
 ### Releasing
 

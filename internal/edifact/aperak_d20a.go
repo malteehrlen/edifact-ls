@@ -24,6 +24,7 @@ func init() {
 	RegisterSchema(
 		MessageID{Type: "APERAK", Version: "D", Release: "20A", Agency: "UN"},
 		aperakD20aSchema,
+		"https://service.unece.org/trade/untdid/d20a/trmd/aperak_c.htm",
 	)
 }
 

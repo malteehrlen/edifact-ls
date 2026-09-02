@@ -35,3 +35,15 @@ func TestRunCheckMissingFileReturnsOne(t *testing.T) {
 		t.Fatalf("exit code = %d, want 1 for a missing file", code)
 	}
 }
+
+func TestRunSchemasListsRegisteredSchemas(t *testing.T) {
+	var buf bytes.Buffer
+	runSchemas(&buf)
+	out := buf.String()
+	if !strings.Contains(out, "IFTMCS") || !strings.Contains(out, "D:21A:UN") {
+		t.Errorf("output = %q, want it to list the registered IFTMCS D:21A:UN schema", out)
+	}
+	if !strings.Contains(out, "https://service.unece.org/trade/untdid/d21a/trmd/iftmcs_c.htm") {
+		t.Errorf("output = %q, want it to include IFTMCS's source URL", out)
+	}
+}

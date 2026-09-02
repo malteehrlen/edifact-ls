@@ -20,6 +20,10 @@ test-e2e: build
 install:
 	$(GO) install -ldflags "$(LDFLAGS)" ./cmd/edifact-ls
 
+.PHONY: docs
+docs:
+	$(GO) run ./tools/gendocs > docs/SUPPORTED_MESSAGES.md
+
 .PHONY: clean
 clean:
 	rm -f $(BIN)

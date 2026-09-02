@@ -18,7 +18,7 @@ func TestValidateMessageSchemasAppliesRegisteredSchema(t *testing.T) {
 	id := MessageID{Type: "TESTMSG", Version: "D", Release: "1A", Agency: "UN"}
 	RegisterSchema(id, Schema{Nodes: []SchemaNode{
 		{Segment: "BGM", Mandatory: true, MaxRepeat: 1},
-	}})
+	}}, "https://example.test/testmsg")
 	defer delete(schemaRegistry, id)
 
 	src := "UNB+UNOA:1+S+R+201001:1200+1'UNH+1+TESTMSG:D:1A:UN'UNT+2+1'UNZ+1+1'"
@@ -40,7 +40,7 @@ func TestValidateMessageSchemasCleanMessagePasses(t *testing.T) {
 	id := MessageID{Type: "TESTMSG2", Version: "D", Release: "1A", Agency: "UN"}
 	RegisterSchema(id, Schema{Nodes: []SchemaNode{
 		{Segment: "BGM", Mandatory: true, MaxRepeat: 1},
-	}})
+	}}, "https://example.test/testmsg2")
 	defer delete(schemaRegistry, id)
 
 	src := "UNB+UNOA:1+S+R+201001:1200+1'UNH+1+TESTMSG2:D:1A:UN'BGM+220'UNT+3+1'UNZ+1+1'"
@@ -57,7 +57,7 @@ func TestValidateMessageSchemasUnmatchedVersionProducesInfo(t *testing.T) {
 	id := MessageID{Type: "TESTMSG3", Version: "D", Release: "1A", Agency: "UN"}
 	RegisterSchema(id, Schema{Nodes: []SchemaNode{
 		{Segment: "BGM", Mandatory: true, MaxRepeat: 1},
-	}})
+	}}, "https://example.test/testmsg3")
 	defer delete(schemaRegistry, id)
 
 	// Same type, different release -- no exact match, but not unknown
@@ -100,13 +100,13 @@ func TestValidateMessageSchemasPlugAndPlaySecondType(t *testing.T) {
 	RegisterSchema(orders, Schema{Nodes: []SchemaNode{
 		{Segment: "BGM", Mandatory: true, MaxRepeat: 1},
 		{Segment: "DTM", Mandatory: false, MaxRepeat: 5},
-	}})
+	}}, "https://example.test/testorders")
 	defer delete(schemaRegistry, orders)
 
 	iftmcsLike := MessageID{Type: "TESTIFTMCS", Version: "D", Release: "21A", Agency: "UN"}
 	RegisterSchema(iftmcsLike, Schema{Nodes: []SchemaNode{
 		{Segment: "CTA", Mandatory: true, MaxRepeat: 1},
-	}})
+	}}, "https://example.test/testiftmcs")
 	defer delete(schemaRegistry, iftmcsLike)
 
 	ordersSrc := "UNB+UNOA:1+S+R+201001:1200+1'UNH+1+TESTORDERS:D:96A:UN'BGM+220'UNT+3+1'UNZ+1+1'"
@@ -126,5 +126,58 @@ func TestValidateMessageSchemasPlugAndPlaySecondType(t *testing.T) {
 	got := ValidateMessageSchemas(ic)
 	if len(got) != 1 || !containsMessage(got, `"CTA"`) {
 		t.Fatalf("validating against TESTIFTMCS: got %v, want one missing-mandatory-CTA error", got)
+	}
+}
+
+func TestListRegisteredSchemasReflectsRegistry(t *testing.T) {
+	id := MessageID{Type: "TESTLIST", Version: "D", Release: "1A", Agency: "UN"}
+	RegisterSchema(id, Schema{Nodes: []SchemaNode{
+		{Segment: "BGM", Mandatory: true, MaxRepeat: 1},
+	}}, "https://example.test/testlist")
+	defer delete(schemaRegistry, id)
+
+	var found *SchemaInfo
+	for _, info := range ListRegisteredSchemas() {
+		if info.ID == id {
+			info := info
+			found = &info
+			break
+		}
+	}
+	if found == nil {
+		t.Fatalf("ListRegisteredSchemas() did not include newly-registered %+v", id)
+	}
+	if found.Source != "https://example.test/testlist" {
+		t.Errorf("Source = %q, want %q", found.Source, "https://example.test/testlist")
+	}
+}
+
+func TestListRegisteredSchemasSortedDeterministically(t *testing.T) {
+	// Register two schemas with types that would sort in the "wrong"
+	// order if the list were e.g. map-iteration order (which Go
+	// deliberately randomizes) instead of an explicit sort.
+	idB := MessageID{Type: "TESTZZZ", Version: "D", Release: "1A", Agency: "UN"}
+	idA := MessageID{Type: "TESTAAA", Version: "D", Release: "1A", Agency: "UN"}
+	empty := Schema{}
+	RegisterSchema(idB, empty, "https://example.test/z")
+	RegisterSchema(idA, empty, "https://example.test/a")
+	defer delete(schemaRegistry, idB)
+	defer delete(schemaRegistry, idA)
+
+	infos := ListRegisteredSchemas()
+	indexA, indexB := -1, -1
+	for i, info := range infos {
+		if info.ID == idA {
+			indexA = i
+		}
+		if info.ID == idB {
+			indexB = i
+		}
+	}
+	if indexA == -1 || indexB == -1 {
+		t.Fatalf("expected both TESTAAA and TESTZZZ in %+v", infos)
+	}
+	if indexA >= indexB {
+		t.Errorf("TESTAAA (index %d) should sort before TESTZZZ (index %d)", indexA, indexB)
 	}
 }

@@ -19,7 +19,7 @@ func main() {
 			return
 		case "--help", "-help", "-h":
 			fmt.Printf("%s speaks LSP over stdio; run it from an editor, not a terminal.\n", lspserver.Name)
-			fmt.Println("Usage: edifact-ls [--version] [--help] | check <file>")
+			fmt.Println("Usage: edifact-ls [--version] [--help] | check <file> | schemas")
 			return
 		case "check":
 			if len(os.Args) < 3 {
@@ -27,6 +27,9 @@ func main() {
 				os.Exit(2)
 			}
 			os.Exit(runCheck(os.Stdout, os.Args[2]))
+		case "schemas":
+			runSchemas(os.Stdout)
+			return
 		}
 	}
 
@@ -60,4 +63,15 @@ func runCheck(w io.Writer, path string) int {
 		return 1
 	}
 	return 0
+}
+
+// runSchemas prints every message specification structural validation is
+// available for, one per line as "TYPE VERSION:RELEASE:AGENCY SOURCE" --
+// the same edifact.ListRegisteredSchemas() data the generated
+// docs/SUPPORTED_MESSAGES.md is built from (see tools/gendocs), so the two
+// can never disagree about what's actually registered.
+func runSchemas(w io.Writer) {
+	for _, info := range edifact.ListRegisteredSchemas() {
+		fmt.Fprintf(w, "%s %s:%s:%s %s\n", info.ID.Type, info.ID.Version, info.ID.Release, info.ID.Agency, info.Source)
+	}
 }
