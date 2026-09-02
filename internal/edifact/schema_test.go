@@ -198,3 +198,67 @@ func TestValidateSchemaNestedGroupMissingMandatoryChild(t *testing.T) {
 		t.Errorf("message = %q, want it to mention the group's missing mandatory child C", errs[0].Message)
 	}
 }
+
+// TestValidateSchemaAdjacentSiblingsSharingLeadingTag is a regression
+// test for a real bug found while bulk-sourcing edifact-ls-13gu: two
+// different, independent schema nodes at the same level that happen to
+// share a leading tag (e.g. UN/EDIFACT's real convention of two
+// separate UNS occurrences marking the header/detail and
+// detail/summary section boundaries) used to be misattributed --
+// the first node's own cap would "steal" the second occurrence as its
+// own overflow, then the second node would report a spurious
+// missing-mandatory error, even though the message was fully
+// conformant.
+func TestValidateSchemaAdjacentSiblingsSharingLeadingTag(t *testing.T) {
+	schema := Schema{Nodes: []SchemaNode{
+		{Segment: "BGM", Mandatory: true, MaxRepeat: 1},
+		{Segment: "UNS", Mandatory: true, MaxRepeat: 1}, // header/detail boundary
+		{Segment: "UNS", Mandatory: true, MaxRepeat: 1}, // detail/summary boundary
+	}}
+	segments := []Segment{seg("BGM", 1), seg("UNS", 2), seg("UNS", 3)}
+
+	errs := ValidateSchema(schema, segments, testEnd)
+	if len(errs) != 0 {
+		t.Fatalf("unexpected diagnostics for two legitimately separate same-tag occurrences: %v", errs)
+	}
+}
+
+// TestValidateSchemaAdjacentSiblingsSharingLeadingTagAcrossOptionalGap
+// covers the same scenario but with a conditional sibling the message
+// instance doesn't use sitting between the two same-tag nodes in the
+// schema (as CONPVA's and CUSDEC's real schemas do) -- confirming the
+// fix looks past every remaining sibling, not just the immediately
+// next one.
+func TestValidateSchemaAdjacentSiblingsSharingLeadingTagAcrossOptionalGap(t *testing.T) {
+	schema := Schema{Nodes: []SchemaNode{
+		{Segment: "BGM", Mandatory: true, MaxRepeat: 1},
+		{Segment: "UNS", Mandatory: true, MaxRepeat: 1},
+		{Segment: "TAX", Mandatory: false, MaxRepeat: 9}, // unused optional gap
+		{Segment: "UNS", Mandatory: true, MaxRepeat: 1},
+	}}
+	segments := []Segment{seg("BGM", 1), seg("UNS", 2), seg("UNS", 3)}
+
+	errs := ValidateSchema(schema, segments, testEnd)
+	if len(errs) != 0 {
+		t.Fatalf("unexpected diagnostics with an unused optional sibling between the two UNS nodes: %v", errs)
+	}
+}
+
+// TestValidateSchemaGenuineOverflowStillDetectedNearSameTagSiblings
+// confirms the fix didn't overcorrect: a real overflow (more
+// occurrences than any node, current or later, can account for) must
+// still be reported.
+func TestValidateSchemaGenuineOverflowStillDetectedNearSameTagSiblings(t *testing.T) {
+	schema := Schema{Nodes: []SchemaNode{
+		{Segment: "BGM", Mandatory: true, MaxRepeat: 1},
+		{Segment: "UNS", Mandatory: true, MaxRepeat: 1},
+		{Segment: "UNS", Mandatory: true, MaxRepeat: 1},
+	}}
+	// Three UNS occurrences, but only two schema slots exist for it.
+	segments := []Segment{seg("BGM", 1), seg("UNS", 2), seg("UNS", 3), seg("UNS", 4)}
+
+	errs := ValidateSchema(schema, segments, testEnd)
+	if len(errs) != 1 || !containsMessage(errs, `"UNS"`) || !containsMessage(errs, "maximum of 1") {
+		t.Fatalf("got %v, want exactly one error about UNS exceeding its max repeat of 1", errs)
+	}
+}

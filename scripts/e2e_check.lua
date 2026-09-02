@@ -71,6 +71,37 @@ local function check_diagnostic(fixture, expect_substring, expect_severity)
     vim.inspect(expect_substring) .. "; got: " .. vim.inspect(messages))
 end
 
+-- Check: opening a fixture that structurally validates cleanly produces no
+-- error-severity diagnostic. Unlike check_diagnostic, absence can't be
+-- detected by waiting for a diagnostic to appear -- instead waits for the
+-- LSP client to attach (so we know the server has had a chance to publish
+-- something), then asserts none of whatever it did publish is an error.
+local function check_no_error_diagnostic(fixture)
+  local path = vim.fn.fnamemodify(fixture, ":p")
+  vim.cmd.edit({ path, bang = true })
+
+  local attached = vim.wait(3000, function()
+    local clients = vim.lsp.get_clients({ name = "edifact_ls", bufnr = 0 })
+    return #clients > 0 and clients[1].initialized == true
+  end, 50)
+  if not attached then
+    fail("edifact_ls LSP client did not attach to " .. path .. " within timeout")
+    return
+  end
+
+  -- Give the server a moment to finish publishing after attach.
+  vim.wait(500)
+
+  local errors = vim.tbl_filter(function(d) return d.severity == vim.diagnostic.severity.ERROR end, vim.diagnostic.get(0))
+  if #errors > 0 then
+    local messages = vim.tbl_map(function(d) return d.message end, errors)
+    fail("expected no error diagnostics for " .. path .. ", got: " .. vim.inspect(messages))
+    return
+  end
+
+  pass("no error diagnostics for " .. path)
+end
+
 -- Check: vim.lsp.buf.format() on a single-line "wire" fixture produces the
 -- expected multiline layout.
 local function check_formatting()
@@ -243,6 +274,16 @@ check_diagnostic("testdata/orders-d99b-violation.edi", "maximum of 1", vim.diagn
 check_diagnostic("testdata/ordrsp-d99b-violation.edi", "maximum of 1", vim.diagnostic.severity.ERROR)
 check_diagnostic("testdata/invoic-d99b-violation.edi", "maximum of 1", vim.diagnostic.severity.ERROR)
 check_diagnostic("testdata/desadv-d99b-violation.edi", "maximum of 5", vim.diagnostic.severity.ERROR)
+-- Spot-checks of edifact-ls-13gu's bulk D.20A batch (182 new message
+-- types) in a real nvim session -- not one per type (182 would be
+-- redundant with the generic unit tests), but representative samples
+-- including the two real bugs the batch surfaced and fixed:
+check_diagnostic("testdata/qality-violation.edi", "maximum of 1", vim.diagnostic.severity.ERROR) -- exercises the wrapped-segment-name parsing fix
+check_no_error_diagnostic("testdata/cusdec-conformant.edi") -- exercises the adjacent-same-tag (double UNS) matcher fix directly
+check_diagnostic("testdata/genral-violation.edi", "maximum of 1", vim.diagnostic.severity.ERROR)
+check_diagnostic("testdata/mscons-violation.edi", "maximum of 1", vim.diagnostic.severity.ERROR)
+check_diagnostic("testdata/coarri-violation.edi", "maximum of 1", vim.diagnostic.severity.ERROR)
+check_no_error_diagnostic("testdata/baplie-conformant.edi")
 check_hover("testdata/minimal.edi", 0, 1, "Interchange header")
 check_hover("testdata/minimal.edi", 2, 1, "Beginning of message")
 -- Regression: a segment whose data is soft-wrapped across lines (a literal

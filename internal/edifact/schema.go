@@ -61,6 +61,21 @@ func ValidateSchema(schema Schema, segments []Segment, atEnd Position) ErrorList
 // call checks the *group's* MaxRepeat instead; double-checking it here
 // too would misreport a legitimate new group occurrence as this leaf
 // overflowing.
+//
+// The same kind of ambiguity also arises between *siblings* later in
+// this same children list: two different schema nodes that happen to
+// share a leading tag (e.g. a message with two independent UNS
+// occurrences marking the header/detail and detail/summary boundaries,
+// or -- found while bulk-sourcing edifact-ls-13gu -- two differently-
+// purposed segment groups that both happen to lead with the same
+// segment, such as several party-detail groups each starting with NAD).
+// These aren't necessarily immediately adjacent -- other, conditional
+// siblings the current message instance doesn't happen to use can sit
+// between them (e.g. UNS ... [optional group] ... UNS) -- so a child at
+// its own cap checks every remaining sibling, not just the next one,
+// for a shared leading tag before concluding a further match is
+// genuinely its own overflow rather than the legitimate start of a
+// later sibling's occurrence.
 func matchSequence(children []SchemaNode, segments []Segment, pos int, atEnd Position, insideGroup bool, errs *ErrorList) int {
 	for i, child := range children {
 		repeats := 0
@@ -73,7 +88,7 @@ func matchSequence(children []SchemaNode, segments []Segment, pos int, atEnd Pos
 			errs.Add(posOrEnd(segments, pos, atEnd), SeverityError, "missing mandatory %s", describe(child))
 		}
 
-		checkOverflow := !(insideGroup && i == 0)
+		checkOverflow := !(insideGroup && i == 0) && !laterSiblingSharesLeadingTag(children, i)
 		if checkOverflow && repeats == child.MaxRepeat && matchesLeading(child, segments, pos) {
 			errs.Add(segments[pos].Pos, SeverityError, "%s repeats more than the maximum of %d time(s) allowed", describe(child), child.MaxRepeat)
 			// Consume the excess occurrences too, so they aren't
@@ -85,6 +100,23 @@ func matchSequence(children []SchemaNode, segments []Segment, pos int, atEnd Pos
 		}
 	}
 	return pos
+}
+
+// laterSiblingSharesLeadingTag reports whether any of children[i+1:] has
+// the same leading tag as children[i]. Scanning every remaining sibling
+// (not just the immediate next one) is what lets this see past
+// conditional siblings that a given message instance doesn't happen to
+// use -- e.g. UNS ... [an unused optional group] ... UNS still resolves
+// correctly, since the second UNS is still found even though it isn't
+// textually adjacent to the first.
+func laterSiblingSharesLeadingTag(children []SchemaNode, i int) bool {
+	tag := leadingTag(children[i])
+	for _, sibling := range children[i+1:] {
+		if leadingTag(sibling) == tag {
+			return true
+		}
+	}
+	return false
 }
 
 // matchOnce consumes exactly one occurrence of node, which the caller has
